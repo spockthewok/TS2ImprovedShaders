@@ -1,0 +1,167 @@
+#include "shaders.h"
+
+namespace
+{
+    const DWORD RegisterPaintMaterialDefinition_Exit = 0xAE23C2;
+    const DWORD RegisterCanvasMaterialDefinition_Exit = 0xAE2ED0;
+    const DWORD LoadLot_Exit = 0xEFC9D0;
+    const DWORD Load_Exit = 0x102C951;
+
+    const char lotXSizeParam[] = "lotXScale";
+    const char lotYSizeParam[] = "lotYScale";
+    // Should only be 2-3 digits, but better to be safe than sorry
+    // Will allow up to 32-bit values to be stored as strings
+    char lotXSize[11];
+    char lotYSize[11];
+
+    const char isBeachParam[] = "isBeachLot";
+    char isBeachLot[6];
+}
+
+namespace Shaders
+{
+    // From RPCLib by LazyDuchess
+    static char *GetLotXScale()
+    {
+        DWORD addr = 0x1478F10;
+        if (Hooking::MemoryReadable((DWORD *)addr, 4))
+        {
+            memcpy_s(&addr, 4, (DWORD *)addr, 4);
+            addr += 0x80;
+            if (Hooking::MemoryReadable((DWORD *)addr, 4))
+            {
+                memcpy_s(&addr, 4, (DWORD *)addr, 4);
+                addr += 0x64;
+                if (Hooking::MemoryReadable((DWORD *)addr, 4))
+                {
+                    memcpy_s(&addr, 4, (DWORD *)addr, 4);
+                    strcpy_s(lotXSize, sizeof(lotXSize), std::to_string(addr).c_str());
+                }
+            }
+        }
+        return lotXSize;
+    }
+
+    // From RPCLib by LazyDuchess
+    static char *GetLotYScale()
+    {
+        DWORD addr = 0x1478F10;
+        if (Hooking::MemoryReadable((DWORD *)addr, 4))
+        {
+            memcpy_s(&addr, 4, (DWORD *)addr, 4);
+            addr += 0x80;
+            if (Hooking::MemoryReadable((DWORD *)addr, 4))
+            {
+                memcpy_s(&addr, 4, (DWORD *)addr, 4);
+                addr += 0x68;
+                if (Hooking::MemoryReadable((DWORD *)addr, 4))
+                {
+                    memcpy_s(&addr, 4, (DWORD *)addr, 4);
+                    strcpy_s(lotYSize, sizeof(lotYSize), std::to_string(addr).c_str());
+                }
+            }
+        }
+        return lotYSize;
+    }
+
+    // Parameter expects a string rather than a boolean
+    static void SetBeachParamValue(bool isBeach)
+    {
+        if (isBeach)
+            strcpy_s(isBeachLot, sizeof(isBeachLot), "true");
+        else
+            strcpy_s(isBeachLot, sizeof(isBeachLot), "false");
+    }
+
+    static void GetIsBeachFromStr(const char *lotTemplate)
+    {
+        // Looking for either "BeachCommunityLotTemplate" or "BeachLotTemplate"
+        bool isBeach = (_strnicmp(lotTemplate, "Beach", 5) == 0);
+        SetBeachParamValue(isBeach);
+    }
+
+    // cWorldDB::Load
+    // Used for lots in Maxis hoods
+    void __declspec(naked) GetIsBeachLot()
+    {
+        __asm {
+            call [eax+0x60]
+            push eax
+            call SetBeachParamValue
+            pop eax
+            test al,al
+            jmp Load_Exit
+        }
+    }
+
+    // cTSLoadLotController::LoadLot
+    // Used for lots in custom hoods
+    void __declspec(naked) GetLotTemplate()
+    {
+        __asm {
+            mov byte ptr [ebp-0x4],0xA
+            pushad
+            push edi
+            call GetIsBeachFromStr
+            add esp,0x4
+            popad
+            push edi
+            jmp LoadLot_Exit
+        }
+    }
+
+    // cTerrain::RegisterPaintMaterialDefinition
+    // Adds extra parameters to lot terrain paint shader
+    void __declspec(naked) TerrainPaintHook()
+    {
+        __asm {
+            push 0x123EAA4 // "alphaMapScaleV"
+            call [eax+0x34]
+            call GetLotXScale
+            mov ecx,[esp+0x14]
+            mov edx,[ecx]
+            push eax // lotXSize
+            push offset lotXSizeParam
+            call [edx+0x34]
+            call GetLotYScale
+            mov ecx,[esp+0x14]
+            mov edx,[ecx]
+            push eax // lotYSize
+            push offset lotYSizeParam
+            call [edx+0x34]
+            mov ecx,[esp+0x14]
+            mov edx,[ecx]
+            push offset isBeachLot
+            push offset isBeachParam
+            call [edx+0x34]
+            jmp RegisterPaintMaterialDefinition_Exit
+        }
+    }
+
+    // cTerrain::RegisterCanvasMaterialDefinition
+    // Adds extra parameters to lot terrain canvas shader
+    // Runs shortly after the paint hook, so don't need to call lot size getters again
+    void __declspec(naked) TerrainCanvasHook()
+    {
+        __asm {
+            push 0x123EB5C // "texture"
+            call [edx+0x34]
+            mov ecx,[esp+0x18]
+            mov edx,[ecx]
+            push offset lotXSize
+            push offset lotXSizeParam
+            call [edx+0x34]
+            mov ecx,[esp+0x18]
+            mov edx,[ecx]
+            push offset lotYSize
+            push offset lotYSizeParam
+            call [edx+0x34]
+            mov ecx,[esp+0x18]
+            mov edx,[ecx]
+            push offset isBeachLot
+            push offset isBeachParam
+            call [edx+0x34]
+            jmp RegisterCanvasMaterialDefinition_Exit
+        }
+    }
+}
