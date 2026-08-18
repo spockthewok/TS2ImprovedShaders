@@ -20,8 +20,8 @@ namespace
 
 namespace Shaders
 {
-    // From RPCLib by LazyDuchess
-    static char *GetLotXScale()
+    // Simplified version of TSGetLotXScale and TSGetLotYScale from RPCLib
+    static char *GetLotScale(DWORD addrOffset, char *lotAxis)
     {
         DWORD addr = 0x1478F10;
         if (Hooking::MemoryReadable((DWORD *)addr, 4))
@@ -31,37 +31,15 @@ namespace Shaders
             if (Hooking::MemoryReadable((DWORD *)addr, 4))
             {
                 memcpy_s(&addr, 4, (DWORD *)addr, 4);
-                addr += 0x64;
+                addr += addrOffset;
                 if (Hooking::MemoryReadable((DWORD *)addr, 4))
                 {
                     memcpy_s(&addr, 4, (DWORD *)addr, 4);
-                    strcpy_s(lotXSize, sizeof(lotXSize), std::to_string(addr).c_str());
+                    strcpy_s(lotAxis, sizeof(lotAxis), std::to_string(addr).c_str());
                 }
             }
         }
-        return lotXSize;
-    }
-
-    // From RPCLib by LazyDuchess
-    static char *GetLotYScale()
-    {
-        DWORD addr = 0x1478F10;
-        if (Hooking::MemoryReadable((DWORD *)addr, 4))
-        {
-            memcpy_s(&addr, 4, (DWORD *)addr, 4);
-            addr += 0x80;
-            if (Hooking::MemoryReadable((DWORD *)addr, 4))
-            {
-                memcpy_s(&addr, 4, (DWORD *)addr, 4);
-                addr += 0x68;
-                if (Hooking::MemoryReadable((DWORD *)addr, 4))
-                {
-                    memcpy_s(&addr, 4, (DWORD *)addr, 4);
-                    strcpy_s(lotYSize, sizeof(lotYSize), std::to_string(addr).c_str());
-                }
-            }
-        }
-        return lotYSize;
+        return lotAxis;
     }
 
     // Parameter expects a string rather than a boolean
@@ -117,13 +95,19 @@ namespace Shaders
         __asm {
             push 0x123EAA4 // "alphaMapScaleV"
             call [eax+0x34]
-            call GetLotXScale
+            push offset lotXSize
+            push 0x64
+            call GetLotScale
+            add esp,0x8
             mov ecx,[esp+0x14]
             mov edx,[ecx]
             push eax // lotXSize
             push offset lotXSizeParam
             call [edx+0x34]
-            call GetLotYScale
+            push offset lotYSize
+            push 0x68
+            call GetLotScale
+            add esp,0x8
             mov ecx,[esp+0x14]
             mov edx,[ecx]
             push eax // lotYSize
@@ -140,7 +124,7 @@ namespace Shaders
 
     // cTerrain::RegisterCanvasMaterialDefinition
     // Adds extra parameters to lot terrain canvas shader
-    // Runs shortly after the paint hook, so don't need to call lot size getters again
+    // Runs shortly after the paint hook, so don't need to call lot size getter again
     void __declspec(naked) TerrainCanvasHook()
     {
         __asm {
