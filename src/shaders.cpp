@@ -9,10 +9,11 @@ namespace
 
     const char lotXSizeParam[] = "lotXScale";
     const char lotYSizeParam[] = "lotYScale";
-    // Should only be 2-3 digits, but better to be safe than sorry
-    // Will allow up to 32-bit values to be stored as strings
-    char lotXSize[11];
-    char lotYSize[11];
+    // X/Y size should only be 2-3 digits, but better to be safe than sorry
+    // Will allow 32-bit values to be stored in array
+    const size_t arrSize = 11;
+    char lotXSize[arrSize];
+    char lotYSize[arrSize];
 
     const char isBeachParam[] = "isBeachLot";
     char isBeachLot[6];
@@ -20,7 +21,8 @@ namespace
 
 namespace Shaders
 {
-    // Simplified version of TSGetLotXScale and TSGetLotYScale from RPCLib
+    // Condensed version of TSGetLotXScale and TSGetLotYScale from RPCLib
+    // https://github.com/LazyDuchess/RPCLib/blob/master/RPCLib/common.cpp
     static char *GetLotScale(DWORD addrOffset, char *lotAxis)
     {
         DWORD addr = 0x1478F10;
@@ -35,10 +37,15 @@ namespace Shaders
                 if (Hooking::MemoryReadable((DWORD *)addr, 4))
                 {
                     memcpy_s(&addr, 4, (DWORD *)addr, 4);
-                    strcpy_s(lotAxis, sizeof(lotAxis), std::to_string(addr).c_str());
+                    // sizeof(lotAxis) would return pointer size, not array size
+                    strcpy_s(lotAxis, arrSize, std::to_string(addr).c_str());
+                    return lotAxis;
                 }
             }
         }
+        // In case memory isn't readable for whatever reason
+        // RPCLib returns lotXSize/lotYSize regardless
+        strcpy_s(lotAxis, arrSize, "0");
         return lotAxis;
     }
 
@@ -53,7 +60,7 @@ namespace Shaders
 
     static void GetIsBeachFromStr(const char *lotTemplate)
     {
-        // Looking for either "BeachCommunityLotTemplate" or "BeachLotTemplate"
+        // Beaches will either be "BeachCommunityLotTemplate" or "BeachLotTemplate"
         bool isBeach = (_strnicmp(lotTemplate, "Beach", 5) == 0);
         SetBeachParamValue(isBeach);
     }
