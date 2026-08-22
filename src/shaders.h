@@ -5,6 +5,6 @@ namespace Shaders
 {
     extern "C" void GetIsBeachLot();
     extern "C" void GetLotTemplate();
-    extern "C" void TerrainPaintHook();
-    extern "C" void TerrainCanvasHook();
+    extern "C" void AddTerrainPaintParams();
+    extern "C" void AddTerrainCanvasParams();
 }

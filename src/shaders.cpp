@@ -11,9 +11,9 @@ namespace
     const char lotYSizeParam[] = "lotYScale";
     // X/Y size should only be 2-3 digits, but better to be safe than sorry
     // Will allow 32-bit values to be stored in array
-    const size_t arrSize = 11;
-    char lotXSize[arrSize];
-    char lotYSize[arrSize];
+    const size_t lotSizeMax = 11;
+    char lotXSize[lotSizeMax];
+    char lotYSize[lotSizeMax];
 
     const char isBeachParam[] = "isBeachLot";
     char isBeachLot[6];
@@ -38,14 +38,14 @@ namespace Shaders
                 {
                     memcpy_s(&addr, 4, (DWORD *)addr, 4);
                     // sizeof(lotAxis) would return pointer size, not array size
-                    strcpy_s(lotAxis, arrSize, std::to_string(addr).c_str());
+                    strcpy_s(lotAxis, lotSizeMax, std::to_string(addr).c_str());
                     return lotAxis;
                 }
             }
         }
         // In case memory isn't readable for whatever reason
         // RPCLib returns lotXSize/lotYSize regardless
-        strcpy_s(lotAxis, arrSize, "0");
+        strcpy_s(lotAxis, lotSizeMax, "0");
         return lotAxis;
     }
 
@@ -60,14 +60,20 @@ namespace Shaders
 
     static void GetIsBeachFromStr(const char *lotTemplate)
     {
-        // Beaches will either be "BeachCommunityLotTemplate" or "BeachLotTemplate"
-        bool isBeach = (_strnicmp(lotTemplate, "Beach", 5) == 0);
+        bool isBeach;
+
+        if (!lotTemplate)
+            isBeach = false;
+        else
+            // Beaches will either be "BeachCommunityLotTemplate" or "BeachLotTemplate"
+            isBeach = (_strnicmp(lotTemplate, "Beach", 5) == 0);
+
         SetBeachParamValue(isBeach);
     }
 
     // cWorldDB::Load
-    // Used for lots in Maxis hoods
-    void __declspec(naked) GetIsBeachLot()
+    // Used for premade lots/lots from lot bin
+    __declspec(naked) void GetIsBeachLot()
     {
         __asm {
             call [eax+0x60]
@@ -80,8 +86,8 @@ namespace Shaders
     }
 
     // cTSLoadLotController::LoadLot
-    // Used for lots in custom hoods
-    void __declspec(naked) GetLotTemplate()
+    // Used for lots created from empty lot templates
+    __declspec(naked) void GetLotTemplate()
     {
         __asm {
             mov byte ptr [ebp-0x4],0xA
@@ -97,7 +103,7 @@ namespace Shaders
 
     // cTerrain::RegisterPaintMaterialDefinition
     // Adds extra parameters to lot terrain paint shader
-    void __declspec(naked) TerrainPaintHook()
+    __declspec(naked) void AddTerrainPaintParams()
     {
         __asm {
             push 0x123EAA4 // "alphaMapScaleV"
@@ -132,7 +138,7 @@ namespace Shaders
     // cTerrain::RegisterCanvasMaterialDefinition
     // Adds extra parameters to lot terrain canvas shader
     // Runs shortly after the paint hook, so don't need to call lot size getter again
-    void __declspec(naked) TerrainCanvasHook()
+    __declspec(naked) void AddTerrainCanvasParams()
     {
         __asm {
             push 0x123EB5C // "texture"
