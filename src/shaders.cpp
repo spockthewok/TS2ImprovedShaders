@@ -73,7 +73,7 @@ namespace Shaders
 
     // cWorldDB::Load
     // Used for premade lots/lots from lot bin
-    __declspec(naked) void GetIsBeachLot()
+    void __declspec(naked) GetIsBeachLot()
     {
         __asm {
             call [eax+0x60]
@@ -87,7 +87,7 @@ namespace Shaders
 
     // cTSLoadLotController::LoadLot
     // Used for lots created from empty lot templates
-    __declspec(naked) void GetLotTemplate()
+    void __declspec(naked) GetLotTemplate()
     {
         __asm {
             mov byte ptr [ebp-0x4],0xA
@@ -103,7 +103,7 @@ namespace Shaders
 
     // cTerrain::RegisterPaintMaterialDefinition
     // Adds extra parameters to lot terrain paint shader
-    __declspec(naked) void AddTerrainPaintParams()
+    void __declspec(naked) AddTerrainPaintParams()
     {
         __asm {
             push 0x123EAA4 // "alphaMapScaleV"
@@ -138,7 +138,7 @@ namespace Shaders
     // cTerrain::RegisterCanvasMaterialDefinition
     // Adds extra parameters to lot terrain canvas shader
     // Runs shortly after the paint hook, so don't need to call lot size getter again
-    __declspec(naked) void AddTerrainCanvasParams()
+    void __declspec(naked) AddTerrainCanvasParams()
     {
         __asm {
             push 0x123EB5C // "texture"
