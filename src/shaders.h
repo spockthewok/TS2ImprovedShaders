@@ -7,4 +7,5 @@ namespace Shaders
     extern "C" void GetLotTemplate();
     extern "C" void AddTerrainPaintParams();
     extern "C" void AddTerrainCanvasParams();
+    extern "C" void AddLotSkirtParams();
 }

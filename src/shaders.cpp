@@ -2,20 +2,23 @@
 
 namespace
 {
+    const DWORD RegisterMaterials_Exit = 0xA83775;
     const DWORD RegisterPaintMaterialDefinition_Exit = 0xAE23C2;
     const DWORD RegisterCanvasMaterialDefinition_Exit = 0xAE2ED0;
     const DWORD LoadLot_Exit = 0xEFC9D0;
     const DWORD Load_Exit = 0x102C951;
 
-    const char lotXSizeParam[] = "lotXScale";
-    const char lotYSizeParam[] = "lotYScale";
-    // X/Y size should only be 2-3 digits, but better to be safe than sorry
-    // Will allow 32-bit values to be stored in array
     const size_t lotSizeMax = 11;
-    char lotXSize[lotSizeMax];
-    char lotYSize[lotSizeMax];
 
-    const char isBeachParam[] = "isBeachLot";
+    const char lotXScaleParam[] = "lotXScale";
+    char lotXScale[lotSizeMax];
+    const char lotYScaleParam[] = "lotYScale";
+    char lotYScale[lotSizeMax];
+
+    const char lotZPosParam[] = "lotZPos";
+    char lotZPos[lotSizeMax];
+
+    const char isBeachLotParam[] = "isBeachLot";
     char isBeachLot[6];
 }
 
@@ -50,7 +53,7 @@ namespace Shaders
     }
 
     // Parameter expects a string rather than a boolean
-    static void SetBeachParamValue(bool isBeach)
+    static void SetIsBeachParam(bool isBeach)
     {
         if (isBeach)
             strcpy_s(isBeachLot, sizeof(isBeachLot), "true");
@@ -68,7 +71,12 @@ namespace Shaders
             // Beaches will either be "BeachCommunityLotTemplate" or "BeachLotTemplate"
             isBeach = (_strnicmp(lotTemplate, "Beach", 5) == 0);
 
-        SetBeachParamValue(isBeach);
+        SetIsBeachParam(isBeach);
+    }
+
+    static void SetLotZPosParam(const float currZPos)
+    {
+        strcpy_s(lotZPos, sizeof(lotZPos), std::to_string(currZPos).c_str());
     }
 
     // cWorldDB::Load
@@ -78,7 +86,7 @@ namespace Shaders
         __asm {
             call [eax+0x60]
             push eax
-            call SetBeachParamValue
+            call SetIsBeachParam
             pop eax
             test al,al
             jmp Load_Exit
@@ -108,28 +116,28 @@ namespace Shaders
         __asm {
             push 0x123EAA4 // "alphaMapScaleV"
             call [eax+0x34]
-            push offset lotXSize
+            push offset lotXScale
             push 0x64
             call GetLotScale
             add esp,0x8
             mov ecx,[esp+0x14]
             mov edx,[ecx]
-            push eax // lotXSize
-            push offset lotXSizeParam
+            push eax // lotXScale
+            push offset lotXScaleParam
             call [edx+0x34]
-            push offset lotYSize
+            push offset lotYScale
             push 0x68
             call GetLotScale
             add esp,0x8
             mov ecx,[esp+0x14]
             mov edx,[ecx]
-            push eax // lotYSize
-            push offset lotYSizeParam
+            push eax // lotYScale
+            push offset lotYScaleParam
             call [edx+0x34]
             mov ecx,[esp+0x14]
             mov edx,[ecx]
             push offset isBeachLot
-            push offset isBeachParam
+            push offset isBeachLotParam
             call [edx+0x34]
             jmp RegisterPaintMaterialDefinition_Exit
         }
@@ -137,7 +145,7 @@ namespace Shaders
 
     // cTerrain::RegisterCanvasMaterialDefinition
     // Adds extra parameters to lot terrain canvas shader
-    // Runs shortly after the paint hook, so don't need to call lot size getter again
+    // Runs shortly after paint hook, so don't need to call lot scale getter again
     void __declspec(naked) AddTerrainCanvasParams()
     {
         __asm {
@@ -145,20 +153,42 @@ namespace Shaders
             call [edx+0x34]
             mov ecx,[esp+0x18]
             mov edx,[ecx]
-            push offset lotXSize
-            push offset lotXSizeParam
+            push offset lotXScale
+            push offset lotXScaleParam
             call [edx+0x34]
             mov ecx,[esp+0x18]
             mov edx,[ecx]
-            push offset lotYSize
-            push offset lotYSizeParam
+            push offset lotYScale
+            push offset lotYScaleParam
             call [edx+0x34]
             mov ecx,[esp+0x18]
             mov edx,[ecx]
             push offset isBeachLot
-            push offset isBeachParam
+            push offset isBeachLotParam
             call [edx+0x34]
             jmp RegisterCanvasMaterialDefinition_Exit
+        }
+    }
+
+    // cLotSkirt::RegisterMaterials
+    // Adds extra parameters to lot skirt shader
+    void __declspec(naked) AddLotSkirtParams()
+    {
+        __asm {
+            push 0x123AFCC // "surfaceTexture"
+            call [edx+0x34]
+            fld [edi+0xBC] // Sea level relative to lot z
+            fchs // Negate to get lot z relative to sea level
+            fstp [esp+0x18]
+            push [esp+0x18]
+            call SetLotZPosParam
+            add esp,0x4
+            mov ecx,[esp+0x14]
+            mov edx,[ecx]
+            push offset lotZPos
+            push offset lotZPosParam
+            call [edx+0x34]
+            jmp RegisterMaterials_Exit
         }
     }
 }
