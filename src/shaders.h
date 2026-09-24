@@ -1,5 +1,4 @@
 #pragma once
-#include "hooking.h"
 
 namespace Shaders
 {
@@ -8,4 +7,5 @@ namespace Shaders
     extern "C" void AddTerrainPaintParams();
     extern "C" void AddTerrainCanvasParams();
     extern "C" void AddLotSkirtParams();
+    extern "C" void AddWeatherShaderMaterials();
 }

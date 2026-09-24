@@ -33,7 +33,7 @@ namespace Hooking
         return;
     }
 
-    bool MemoryReadable(void *ptr, size_t byteCount)
+    bool MemoryReadable(const void *ptr, size_t byteCount)
     {
         MEMORY_BASIC_INFORMATION mbi;
 

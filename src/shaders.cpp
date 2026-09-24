@@ -1,45 +1,60 @@
 #include "shaders.h"
+#include "hooking.h"
+#include <string>
 
 namespace
 {
     const DWORD RegisterMaterials_Exit = 0xA83775;
     const DWORD RegisterPaintMaterialDefinition_Exit = 0xAE23C2;
     const DWORD RegisterCanvasMaterialDefinition_Exit = 0xAE2ED0;
+    const DWORD UpdateWeatherShaders_Exit = 0xB24C82;
     const DWORD LoadLot_Exit = 0xEFC9D0;
     const DWORD Load_Exit = 0x102C951;
 
     const size_t lotSizeMax = 11;
 
+    // Lot width/height
     const char lotXScaleParam[] = "lotXScale";
     char lotXScale[lotSizeMax];
     const char lotYScaleParam[] = "lotYScale";
     char lotYScale[lotSizeMax];
 
+    // Distance between lot z and sea level
     const char lotZPosParam[] = "lotZPos";
     char lotZPos[lotSizeMax];
 
+    // Lot x/y offset from world (0, 0)
+    const char lotXOffsetParam[] = "lotXOffset";
+    char lotXOffset[lotSizeMax];
+    const char lotYOffsetParam[] = "lotYOffset";
+    char lotYOffset[lotSizeMax];
+
     const char isBeachLotParam[] = "isBeachLot";
     char isBeachLot[6];
+
+    const char lotSkirtWater[] = "LotSkirtWater";
 }
 
 namespace Shaders
 {
     // Condensed version of TSGetLotXScale and TSGetLotYScale from RPCLib
     // https://github.com/LazyDuchess/RPCLib/blob/master/RPCLib/common.cpp
-    static char *GetLotScale(DWORD addrOffset, char *lotAxis)
+    static char *GetLotScale(BYTE addrOffset, char *lotAxis)
     {
         DWORD addr = 0x1478F10;
-        if (Hooking::MemoryReadable((DWORD *)addr, 4))
+        const size_t addrSize = sizeof(addr);
+
+        if (Hooking::MemoryReadable((DWORD *)addr, addrSize))
         {
-            memcpy_s(&addr, 4, (DWORD *)addr, 4);
+            memcpy_s(&addr, addrSize, (DWORD *)addr, addrSize);
             addr += 0x80;
-            if (Hooking::MemoryReadable((DWORD *)addr, 4))
+            if (Hooking::MemoryReadable((DWORD *)addr, addrSize))
             {
-                memcpy_s(&addr, 4, (DWORD *)addr, 4);
+                memcpy_s(&addr, addrSize, (DWORD *)addr, addrSize);
                 addr += addrOffset;
-                if (Hooking::MemoryReadable((DWORD *)addr, 4))
+                if (Hooking::MemoryReadable((DWORD *)addr, addrSize))
                 {
-                    memcpy_s(&addr, 4, (DWORD *)addr, 4);
+                    memcpy_s(&addr, addrSize, (DWORD *)addr, addrSize);
                     // sizeof(lotAxis) would return pointer size, not array size
                     strcpy_s(lotAxis, lotSizeMax, std::to_string(addr).c_str());
                     return lotAxis;
@@ -47,13 +62,13 @@ namespace Shaders
             }
         }
         // In case memory isn't readable for whatever reason
-        // RPCLib returns lotXSize/lotYSize regardless
+        // RPCLib returns lotXScale/lotYScale regardless
         strcpy_s(lotAxis, lotSizeMax, "0");
         return lotAxis;
     }
 
     // Parameter expects a string rather than a boolean
-    static void SetIsBeachParam(bool isBeach)
+    static void SetIsBeachLotParam(bool isBeach)
     {
         if (isBeach)
             strcpy_s(isBeachLot, sizeof(isBeachLot), "true");
@@ -61,7 +76,7 @@ namespace Shaders
             strcpy_s(isBeachLot, sizeof(isBeachLot), "false");
     }
 
-    static void GetIsBeachFromStr(const char *lotTemplate)
+    static void GetIsBeachLotFromStr(const char *lotTemplate)
     {
         bool isBeach;
 
@@ -71,12 +86,7 @@ namespace Shaders
             // Beaches will either be "BeachCommunityLotTemplate" or "BeachLotTemplate"
             isBeach = (_strnicmp(lotTemplate, "Beach", 5) == 0);
 
-        SetIsBeachParam(isBeach);
-    }
-
-    static void SetLotZPosParam(const float currZPos)
-    {
-        strcpy_s(lotZPos, sizeof(lotZPos), std::to_string(currZPos).c_str());
+        SetIsBeachLotParam(isBeach);
     }
 
     // cWorldDB::Load
@@ -86,7 +96,7 @@ namespace Shaders
         __asm {
             call [eax+0x60]
             push eax
-            call SetIsBeachParam
+            call SetIsBeachLotParam
             pop eax
             test al,al
             jmp Load_Exit
@@ -101,7 +111,7 @@ namespace Shaders
             mov byte ptr [ebp-0x4],0xA
             pushad
             push edi
-            call GetIsBeachFromStr
+            call GetIsBeachLotFromStr
             add esp,0x4
             popad
             push edi
@@ -170,6 +180,18 @@ namespace Shaders
         }
     }
 
+    static void SetLotZPosParam(const float seaZPos)
+    {
+        // Negate seaZPos to get lot z relative to sea level
+        strcpy_s(lotZPos, sizeof(lotZPos), std::to_string(-seaZPos).c_str());
+    }
+
+    static void SetLotOffsetParams(const int offsetX, const int offsetY)
+    {
+        strcpy_s(lotXOffset, sizeof(lotXOffset), std::to_string((float)offsetX).c_str());
+        strcpy_s(lotYOffset, sizeof(lotYOffset), std::to_string((float)offsetY).c_str());
+    }
+
     // cLotSkirt::RegisterMaterials
     // Adds extra parameters to lot skirt shader
     void __declspec(naked) AddLotSkirtParams()
@@ -177,10 +199,7 @@ namespace Shaders
         __asm {
             push 0x123AFCC // "surfaceTexture"
             call [edx+0x34]
-            fld [edi+0xBC] // Sea level relative to lot z
-            fchs // Negate to get lot z relative to sea level
-            fstp [esp+0x18]
-            push [esp+0x18]
+            push [edi+0xBC] // Sea level relative to lot z
             call SetLotZPosParam
             add esp,0x4
             mov ecx,[esp+0x14]
@@ -188,7 +207,49 @@ namespace Shaders
             push offset lotZPos
             push offset lotZPosParam
             call [edx+0x34]
+            pushad
+            push [edi+0xFC]
+            push [edi+0xF8]
+            call SetLotOffsetParams
+            add esp,0x8
+            popad
+            mov ecx,[esp+0x14]
+            mov edx,[ecx]
+            push offset lotXOffset
+            push offset lotXOffsetParam
+            call [edx+0x34]
+            mov ecx,[esp+0x14]
+            mov edx,[ecx]
+            push offset lotYOffset
+            push offset lotYOffsetParam
+            call [edx+0x34]
             jmp RegisterMaterials_Exit
+        }
+    }
+
+    // cTSSGSystem::UpdateWeatherShaders
+    // Adds additional matShads that should be updated on time/weather/season change
+    void __declspec(naked) AddWeatherShaderMaterials()
+    {
+        __asm {
+            push 0x123EDB0 // "TerrainCanvasShader"
+            mov ecx,esi
+            call [eax+0x78]
+            mov edx,[esi]
+            push 0x123E920 // "NeighborhoodWater"
+            mov ecx,esi
+            call [edx+0x78]
+            mov eax,[esi]
+            push 0x1241F08 // "TerrainWater"
+            mov ecx,esi
+            call [eax+0x78]
+            mov edx,[esi]
+            push offset lotSkirtWater
+            mov ecx,esi
+            call [edx+0x78]
+            mov eax,[esi]
+            push 0x123AFDC // "LotSkirtMaterialDefinition"
+            jmp UpdateWeatherShaders_Exit
         }
     }
 }
