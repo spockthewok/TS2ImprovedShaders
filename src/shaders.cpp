@@ -1,5 +1,6 @@
 #include "shaders.h"
 #include "hooking.h"
+#include "TS2.h"
 #include <string>
 
 namespace
@@ -33,6 +34,8 @@ namespace
     char isBeachLot[6];
 
     const char lotSkirtWater[] = "LotSkirtWater";
+    const char nhoodBuildingMaterial[] = "NeighborhoodBuildingMaterial";
+    const char nhoodGlowMaterial[] = "NeighborhoodGlowMaterial";
 }
 
 namespace Shaders
@@ -229,6 +232,7 @@ namespace Shaders
 
     // cTSSGSystem::UpdateWeatherShaders
     // Adds additional matShads that should be updated on time/weather/season change
+    // Building and glow materials added to fix stuck lights when dawn/dusk states enabled
     void __declspec(naked) AddWeatherShaderMaterials()
     {
         __asm {
@@ -245,6 +249,14 @@ namespace Shaders
             call [eax+0x78]
             mov edx,[esi]
             push offset lotSkirtWater
+            mov ecx,esi
+            call [edx+0x78]
+            mov eax,[esi]
+            push offset nhoodBuildingMaterial
+            mov ecx,esi
+            call [eax+0x78]
+            mov edx,[esi]
+            push offset nhoodGlowMaterial
             mov ecx,esi
             call [edx+0x78]
             mov eax,[esi]
