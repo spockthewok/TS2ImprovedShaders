@@ -1,4 +1,5 @@
 #include "maps.h"
+#include "hooking.h"
 
 namespace Maps
 {

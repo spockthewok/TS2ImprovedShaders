@@ -6,6 +6,7 @@
 namespace
 {
     const DWORD RegisterMaterials_Exit = 0xA83775;
+    const DWORD CreateNodesForRoadCells_Exit = 0xA8432F;
     const DWORD RegisterPaintMaterialDefinition_Exit = 0xAE23C2;
     const DWORD RegisterCanvasMaterialDefinition_Exit = 0xAE2ED0;
     const DWORD UpdateWeatherShaders_Exit = 0xB24C82;
@@ -35,7 +36,11 @@ namespace
 
     const char lotSkirtWater[] = "LotSkirtWater";
     const char nhoodBuildingMaterial[] = "NeighborhoodBuildingMaterial";
+    // Requires Better Nightlife
+    // https://www.tumblr.com/criquette-was-here/157941568866/better-nightlife-ts2-custom-hood-deco-night
     const char nhoodGlowMaterial[] = "NeighborhoodGlowMaterial";
+
+    const char *roadMaterial = nullptr;
 }
 
 namespace Shaders
@@ -195,11 +200,55 @@ namespace Shaders
         strcpy_s(lotYOffset, sizeof(lotYOffset), std::to_string((float)offsetY).c_str());
     }
 
+    static const char *SetRoadTextureName(const char *matName)
+    {
+        if (!matName)
+            return "";
+
+        std::string roadTexture(matName);
+        roadTexture.back() = '4';
+
+        return roadTexture.c_str();
+    }
+
     // cLotSkirt::RegisterMaterials
-    // Adds extra parameters to lot skirt shader
+    // This disgusting code adds extra parameters to lot skirt and road shaders
     void __declspec(naked) AddLotSkirtParams()
     {
         __asm {
+            cmp [roadMaterial],0x0
+            je LAB_LotSkirtMaterial
+            mov eax,[roadMaterial]
+            jmp LAB_SetMaterial
+        LAB_LotSkirtMaterial:
+            mov eax,[edi+0x7C]
+        LAB_SetMaterial:
+            mov ecx,[esp+0x14]
+            mov edx,[ecx]
+            push eax
+            call [edx+0x28]
+            mov ecx,[esp+0x14]
+            mov eax,[ecx]
+            cmp [roadMaterial],0x0
+            je LAB_LotSkirtDefinition
+            push 0x1241F54
+            jmp LAB_SetDefinition
+        LAB_LotSkirtDefinition:
+            push 0x123AFDC
+        LAB_SetDefinition:
+            call [eax+0x30]
+            cmp [roadMaterial],0x0
+            je LAB_LotSkirtTexture
+            push [roadMaterial]
+            call SetRoadTextureName
+            add esp,0x4
+            jmp LAB_SetTexture
+        LAB_LotSkirtTexture:
+            mov eax,[esp+0x30]
+        LAB_SetTexture:
+            mov ecx,[esp+0x14]
+            mov edx,[ecx]
+            push eax
             push 0x123AFCC // "surfaceTexture"
             call [edx+0x34]
             push [edi+0xBC] // Sea level relative to lot z
@@ -230,8 +279,22 @@ namespace Shaders
         }
     }
 
+    void __declspec(naked) AddLotSkirtRoadParams()
+    {
+        __asm {
+            mov ecx,[esp+0x5C]
+            mov [roadMaterial],ecx
+            mov ecx,ebx
+            call cLotSkirt::RegisterMaterials
+            mov [roadMaterial],0x0
+            mov eax,[esp+0x5C]
+            cmp eax,edi
+            jmp CreateNodesForRoadCells_Exit
+        }
+    }
+
     // cTSSGSystem::UpdateWeatherShaders
-    // Adds additional matShads that should be updated on time/weather/season change
+    // Adds additional materials that should be updated on time/weather/season change
     // Building and glow materials added to fix stuck lights when dawn/dusk states enabled
     void __declspec(naked) AddWeatherShaderMaterials()
     {
