@@ -28,7 +28,8 @@ This plugin was primarily developed for Christaskyy's Improved Shaders mod.
 | `lotYOffset` | Float | The current lot's y-coordinate relative the world origin (0, 0). |
 
 ## Bug Fixes
-- Fixed building window lights not updating correctly when using a lighting mod that enables dawn/dusk lighting states.
+- Fixed building window lights failing to update when using a lighting mod that enables dawn/dusk lighting states, causing them get stuck
+  either on or off.
 - Also fixed a [similar issue](https://lowedeus.tumblr.com/post/158006347041/badchriss-hmsomething-weird-is-going-on-with) with the neighbourhood glow
   material added by [Better Nightlife](https://www.tumblr.com/criquette-was-here/157941568866/better-nightlife-ts2-custom-hood-deco-night).
 

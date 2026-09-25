@@ -1,6 +1,6 @@
 #include "terrain.h"
 #include "hooking.h"
-#include <string>
+#include "common.h"
 
 namespace
 {
@@ -42,23 +42,20 @@ namespace Terrain
                 {
                     memcpy_s(&addr, addrSize, (DWORD *)addr, addrSize);
                     // sizeof(lotAxis) would return pointer size, not array size
-                    strcpy_s(lotAxis, paramMax, std::to_string(addr).c_str());
+                    Common::SetParamValue(lotAxis, paramMax, addr);
                     return lotAxis;
                 }
             }
         }
         // In case memory isn't readable for whatever reason
         // RPCLib returns lotXScale/lotYScale regardless
-        strcpy_s(lotAxis, paramMax, "0");
+        Common::SetParamValue(lotAxis, paramMax, 0);
         return lotAxis;
     }
 
     static void SetIsBeachLotParam(bool isBeach)
     {
-        if (isBeach)
-            strcpy_s(isBeachLot, sizeof(isBeachLot), "true");
-        else
-            strcpy_s(isBeachLot, sizeof(isBeachLot), "false");
+        Common::SetParamValue(isBeachLot, sizeof(isBeachLot), isBeach);
     }
 
     static void GetIsBeachLotFromStr(const char *lotTemplate)

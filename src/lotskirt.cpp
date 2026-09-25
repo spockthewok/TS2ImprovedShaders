@@ -1,6 +1,6 @@
 #include "lotskirt.h"
 #include "TS2.h"
-#include <string>
+#include "common.h"
 
 namespace
 {
@@ -26,37 +26,41 @@ namespace LotSkirt
 {
     static void SetLotZPosParam(const float seaZPos)
     {
+        // seaZPos = sea level relative to lot z
         // Negate seaZPos to get lot z relative to sea level
-        strcpy_s(lotZPos, sizeof(lotZPos), std::to_string(-seaZPos).c_str());
+        Common::SetParamValue(lotZPos, sizeof(lotZPos), -seaZPos);
     }
 
     static void SetLotOffsetParams(const int offsetX, const int offsetY)
     {
         // Could leave these as ints but the params are floats in Castaway Stories
-        float x = static_cast<float>(offsetX);
-        float y = static_cast<float>(offsetY);
-        strcpy_s(lotXOffset, sizeof(lotXOffset), std::to_string(x).c_str());
-        strcpy_s(lotYOffset, sizeof(lotYOffset), std::to_string(y).c_str());
+        Common::SetParamValue(lotXOffset, sizeof(lotXOffset), static_cast<float>(offsetX));
+        Common::SetParamValue(lotYOffset, sizeof(lotYOffset), static_cast<float>(offsetY));
     }
 
     // All param values are object vars precalculated by cLotSkirt::ComputeLotSkirtParameters
+    // We skip calling setters for roads as values will have already been set by lot skirt material
     static void __declspec(naked) AddNewParams()
     {
         __asm {
-            push [edi+0xBC] // Sea level relative to lot z
+            cmp [roadMaterial],0x0
+            jne LAB_SkipSetZPos
+            push [edi+0xBC]
             call SetLotZPosParam
             add esp,0x4
+        LAB_SkipSetZPos:
             mov ecx,[esp+0x18]
             mov edx,[ecx]
             push offset lotZPos
             push offset lotZPosParam
             call [edx+0x34]
-            pushad
+            cmp [roadMaterial],0x0
+            jne LAB_SkipSetOffsets
             push [edi+0xFC]
             push [edi+0xF8]
             call SetLotOffsetParams
             add esp,0x8
-            popad
+        LAB_SkipSetOffsets:
             mov ecx,[esp+0x18]
             mov edx,[ecx]
             push offset lotXOffset
