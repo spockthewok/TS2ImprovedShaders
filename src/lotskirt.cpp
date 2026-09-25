@@ -7,17 +7,17 @@ namespace
     const DWORD RegisterMaterials_Exit = 0xA83775;
     const DWORD CreateNodesForRoadCells_Exit = 0xA8432F;
 
-    const size_t lotSizeMax = 11;
+    const size_t paramMax = 11;
 
     // Distance between lot z and sea level
     const char lotZPosParam[] = "lotZPos";
-    char lotZPos[lotSizeMax];
+    char lotZPos[paramMax];
 
     // Lot x/y offset from world (0, 0)
     const char lotXOffsetParam[] = "lotXOffset";
-    char lotXOffset[lotSizeMax];
+    char lotXOffset[paramMax];
     const char lotYOffsetParam[] = "lotYOffset";
-    char lotYOffset[lotSizeMax];
+    char lotYOffset[paramMax];
 
     const char *roadMaterial = nullptr;
 }
@@ -32,25 +32,65 @@ namespace LotSkirt
 
     static void SetLotOffsetParams(const int offsetX, const int offsetY)
     {
-        strcpy_s(lotXOffset, sizeof(lotXOffset), std::to_string((float)offsetX).c_str());
-        strcpy_s(lotYOffset, sizeof(lotYOffset), std::to_string((float)offsetY).c_str());
+        // Could leave these as ints but the params are floats in Castaway Stories
+        float x = static_cast<float>(offsetX);
+        float y = static_cast<float>(offsetY);
+        strcpy_s(lotXOffset, sizeof(lotXOffset), std::to_string(x).c_str());
+        strcpy_s(lotYOffset, sizeof(lotYOffset), std::to_string(y).c_str());
     }
 
-    static const char *SetRoadTextureName(const char *matName)
+    // All param values are object vars precalculated by cLotSkirt::ComputeLotSkirtParameters
+    static void __declspec(naked) AddNewParams()
+    {
+        __asm {
+            push [edi+0xBC] // Sea level relative to lot z
+            call SetLotZPosParam
+            add esp,0x4
+            mov ecx,[esp+0x18]
+            mov edx,[ecx]
+            push offset lotZPos
+            push offset lotZPosParam
+            call [edx+0x34]
+            pushad
+            push [edi+0xFC]
+            push [edi+0xF8]
+            call SetLotOffsetParams
+            add esp,0x8
+            popad
+            mov ecx,[esp+0x18]
+            mov edx,[ecx]
+            push offset lotXOffset
+            push offset lotXOffsetParam
+            call [edx+0x34]
+            mov ecx,[esp+0x18]
+            mov edx,[ecx]
+            push offset lotYOffset
+            push offset lotYOffsetParam
+            call [edx+0x34]
+            ret
+        }
+    }
+
+    static const char *GetRoadTextureName(const char *matName)
     {
         if (!matName)
             return "";
 
         std::string roadTexture(matName);
-        roadTexture.back() = '4';
+
+        // All vanilla road texture names are same as material name, but with '4' as last char
+        // Don't think there are any mods that add new road types which might break this rule
+        if (!roadTexture.empty())
+            roadTexture.back() = '4';
 
         return roadTexture.c_str();
     }
 
     // cLotSkirt::RegisterMaterials
-    // This disgusting code adds extra parameters to lot skirt and road shaders
-    // If road material name is null then adds params to lot skirt, otherwise adds to roads
-    void __declspec(naked) AddLotSkirtParams()
+    // Lot skirt road material doesn't normally have code-based params
+    // This hijacks cLotSkirt::RegisterMaterials and provides a path for adding params to roads
+    // Not sold on this approach, but it's simpler than trying to init a cMaterialDefinition object
+    void __declspec(naked) HandleRoadParams()
     {
         __asm {
             cmp [roadMaterial],0x0
@@ -77,41 +117,18 @@ namespace LotSkirt
             cmp [roadMaterial],0x0
             je LAB_LotSkirtTexture
             push [roadMaterial]
-            call SetRoadTextureName
+            call GetRoadTextureName
             add esp,0x4
-            jmp LAB_SetTexture
+            jmp LAB_SetTextureParam
         LAB_LotSkirtTexture:
             mov eax,[esp+0x30]
-        LAB_SetTexture:
+        LAB_SetTextureParam:
             mov ecx,[esp+0x14]
             mov edx,[ecx]
             push eax
             push 0x123AFCC // "surfaceTexture"
             call [edx+0x34]
-            push [edi+0xBC] // Sea level relative to lot z
-            call SetLotZPosParam
-            add esp,0x4
-            mov ecx,[esp+0x14]
-            mov edx,[ecx]
-            push offset lotZPos
-            push offset lotZPosParam
-            call [edx+0x34]
-            pushad
-            push [edi+0xFC]
-            push [edi+0xF8]
-            call SetLotOffsetParams
-            add esp,0x8
-            popad
-            mov ecx,[esp+0x14]
-            mov edx,[ecx]
-            push offset lotXOffset
-            push offset lotXOffsetParam
-            call [edx+0x34]
-            mov ecx,[esp+0x14]
-            mov edx,[ecx]
-            push offset lotYOffset
-            push offset lotYOffsetParam
-            call [edx+0x34]
+            call AddNewParams
             jmp RegisterMaterials_Exit
         }
     }

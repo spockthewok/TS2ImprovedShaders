@@ -14,7 +14,7 @@ namespace Core
         Hooking::MakeJMP((BYTE *)0xEFC9CB, (DWORD)Terrain::GetLotTemplate, 5);
         Hooking::MakeJMP((BYTE *)0xAE23BA, (DWORD)Terrain::AddTerrainPaintParams, 5);
         Hooking::MakeJMP((BYTE *)0xAE2EC8, (DWORD)Terrain::AddTerrainCanvasParams, 5);
-        Hooking::MakeJMP((BYTE *)0xA83747, (DWORD)LotSkirt::AddLotSkirtParams, 7);
+        Hooking::MakeJMP((BYTE *)0xA83747, (DWORD)LotSkirt::HandleRoadParams, 7);
         Hooking::MakeJMP((BYTE *)0xA84329, (DWORD)LotSkirt::AddLotSkirtRoadParams, 6);
         Hooking::MakeJMP((BYTE *)0xB24C7D, (DWORD)Shaders::AddWeatherShaderMaterials, 5);
     }

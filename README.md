@@ -1,7 +1,8 @@
 # TS2 Improved Shaders
 ## About
-This is the source code for the plugin developed for Christaskyy's Improved Shaders mod for The Sims 2, which adds extra parameters that may
-be useful to extend certain functionality within the game's shaders.
+A patch for The Sims 2 that adds new shader parameters to support extended shader functionality and fixes several shader-related bugs.
+
+This plugin was primarily developed for Christaskyy's Improved Shaders mod.
 
 ## Requirements
 - The Sims 2: Ultimate Collection <ins>**OR**</ins> The Sims 2 disc version with all EPs and SPs.
@@ -23,13 +24,13 @@ be useful to extend certain functionality within the game's shaders.
 | Parameter | Type | Description |
 | :-------: | :--: | :---------: |
 | `lotZPos` | Float | How high the current lot is above sea level. |
-| `lotXOffset` | Float | The current lot's distance from (0,0) in the world along the x-axis. |
-| `lotYOffset` | Float | The current lot's distance from (0,0) in the world along the y-axis. |
+| `lotXOffset` | Float | The current lot's x-coordinate relative the world origin (0, 0). |
+| `lotYOffset` | Float | The current lot's y-coordinate relative the world origin (0, 0). |
 
 ## Bug Fixes
-- Fixed building window lights getting stuck in their on/off state when using a lighting mod that enables dawn/dusk lighting.
-- Also fixed the same bug for the neighbourhood glow material added by
-[Better Nightlife](https://www.tumblr.com/criquette-was-here/157941568866/better-nightlife-ts2-custom-hood-deco-night).
+- Fixed building window lights not updating correctly when using a lighting mod that enables dawn/dusk lighting states.
+- Also fixed a [similar issue](https://lowedeus.tumblr.com/post/158006347041/badchriss-hmsomething-weird-is-going-on-with) with the neighbourhood glow
+  material added by [Better Nightlife](https://www.tumblr.com/criquette-was-here/157941568866/better-nightlife-ts2-custom-hood-deco-night).
 
 ## Thanks
 [Christaskyy](https://www.tumblr.com/christaskyy), for asking me to create this.

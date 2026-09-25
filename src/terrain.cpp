@@ -9,13 +9,13 @@ namespace
     const DWORD LoadLot_Exit = 0xEFC9D0;
     const DWORD Load_Exit = 0x102C951;
 
-    const size_t lotSizeMax = 11;
+    const size_t paramMax = 11;
 
     // Lot width/height
     const char lotXScaleParam[] = "lotXScale";
-    char lotXScale[lotSizeMax];
+    char lotXScale[paramMax];
     const char lotYScaleParam[] = "lotYScale";
-    char lotYScale[lotSizeMax];
+    char lotYScale[paramMax];
 
     const char isBeachLotParam[] = "isBeachLot";
     char isBeachLot[6];
@@ -42,18 +42,17 @@ namespace Terrain
                 {
                     memcpy_s(&addr, addrSize, (DWORD *)addr, addrSize);
                     // sizeof(lotAxis) would return pointer size, not array size
-                    strcpy_s(lotAxis, lotSizeMax, std::to_string(addr).c_str());
+                    strcpy_s(lotAxis, paramMax, std::to_string(addr).c_str());
                     return lotAxis;
                 }
             }
         }
         // In case memory isn't readable for whatever reason
         // RPCLib returns lotXScale/lotYScale regardless
-        strcpy_s(lotAxis, lotSizeMax, "0");
+        strcpy_s(lotAxis, paramMax, "0");
         return lotAxis;
     }
 
-    // Parameter expects a string rather than a boolean
     static void SetIsBeachLotParam(bool isBeach)
     {
         if (isBeach)
@@ -106,7 +105,7 @@ namespace Terrain
     }
 
     // cTerrain::RegisterPaintMaterialDefinition
-    // Adds extra parameters to lot terrain paint shader
+    // Adds extra parameters to lot terrain paint material
     void __declspec(naked) AddTerrainPaintParams()
     {
         __asm {
@@ -140,7 +139,7 @@ namespace Terrain
     }
 
     // cTerrain::RegisterCanvasMaterialDefinition
-    // Adds extra parameters to lot terrain canvas shader
+    // Adds extra parameters to lot terrain canvas material
     // Runs shortly after paint hook, so don't need to call lot scale getter again
     void __declspec(naked) AddTerrainCanvasParams()
     {
