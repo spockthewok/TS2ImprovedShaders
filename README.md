@@ -18,14 +18,15 @@ This plugin was primarily developed for Christaskyy's Improved Shaders mod.
 | :-------: | :--: | :---------: |
 | `lotXScale` | Integer | Width of the current lot in tiles. |
 | `lotYScale` | Integer | Height of the current lot in tiles. |
+| `lotZPos` | Float | How high the current lot is above sea level. |
 | `isBeachLot` | Boolean | Whether the current lot is a beach lot. |
 
 ### lotSkirt.matShad
 | Parameter | Type | Description |
 | :-------: | :--: | :---------: |
-| `lotZPos` | Float | How high the current lot is above sea level. |
 | `lotXOffset` | Float | The current lot's x-coordinate relative the world origin (0, 0). |
 | `lotYOffset` | Float | The current lot's y-coordinate relative the world origin (0, 0). |
+| `lotZPos` | Float | How high the current lot is above sea level. |
 
 ## Bug Fixes
 - Fixed building window lights failing to update when using a lighting mod that enables dawn/dusk lighting states, causing them get stuck

@@ -1,25 +1,19 @@
 #pragma once
-#include <string>
 
 namespace Common
 {
-    template <typename T>
-    void SetParamValue(char *param, size_t paramSize, const T &value)
-    {
-        std::string valueStr;
+    // These are global vars to make passing array size to setters using ASM easier
+    // intMax may seem redundant, but it helps to distinguish param types
+    constexpr size_t floatMax = 11;
+    constexpr size_t intMax = floatMax;
+    constexpr size_t boolMax = 6;
 
-        if constexpr (std::is_same_v<T, std::string>)
-            valueStr = value;
-        else if constexpr (std::is_same_v<T, bool>)
-        {
-            if (value)
-                valueStr = "true";
-            else
-                valueStr = "false";
-        }
-        else
-            valueStr = std::to_string(value);
+    extern const char lotZPosParam[];
+    extern char lotZPos[floatMax];
 
-        strcpy_s(param, paramSize, valueStr.c_str());
-    }
+    // These are wrappers for calling SetParamImpl()
+    // Wish I didn't need these, but not possible to call template funcs directly using ASM :/
+    void SetParamInt(char *param, size_t paramSize, const int value, bool asFloat = false);
+    void SetParamFloat(char *param, size_t paramSize, const float value);
+    void SetParamBool(char *param, size_t paramSize, const bool value);
 }

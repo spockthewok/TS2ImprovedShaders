@@ -1,65 +1,47 @@
 #include "lotskirt.h"
 #include "TS2.h"
 #include "common.h"
+#include <string>
 
 namespace
 {
     const DWORD RegisterMaterials_Exit = 0xA83775;
     const DWORD CreateNodesForRoadCells_Exit = 0xA8432F;
 
-    const size_t paramMax = 11;
-
-    // Distance between lot z and sea level
-    const char lotZPosParam[] = "lotZPos";
-    char lotZPos[paramMax];
-
     // Lot x/y offset from world (0, 0)
     const char lotXOffsetParam[] = "lotXOffset";
-    char lotXOffset[paramMax];
+    char lotXOffset[Common::floatMax];
     const char lotYOffsetParam[] = "lotYOffset";
-    char lotYOffset[paramMax];
+    char lotYOffset[Common::floatMax];
 
     const char *roadMaterial = nullptr;
 }
 
 namespace LotSkirt
 {
-    static void SetLotZPosParam(const float seaZPos)
-    {
-        // seaZPos = sea level relative to lot z
-        // Negate seaZPos to get lot z relative to sea level
-        Common::SetParamValue(lotZPos, sizeof(lotZPos), -seaZPos);
-    }
-
-    static void SetLotOffsetParams(const int offsetX, const int offsetY)
-    {
-        // Could leave these as ints but the params are floats in Castaway Stories
-        Common::SetParamValue(lotXOffset, sizeof(lotXOffset), static_cast<float>(offsetX));
-        Common::SetParamValue(lotYOffset, sizeof(lotYOffset), static_cast<float>(offsetY));
-    }
-
-    // All param values are object vars precalculated by cLotSkirt::ComputeLotSkirtParameters
-    // We skip calling setters for roads as values will have already been set by lot skirt material
+    // We skip calling setters for roads as values will have been set by lot skirt material
     static void __declspec(naked) AddNewParams()
     {
         __asm {
-            cmp [roadMaterial],0x0
-            jne LAB_SkipSetZPos
-            push [edi+0xBC]
-            call SetLotZPosParam
-            add esp,0x4
-        LAB_SkipSetZPos:
             mov ecx,[esp+0x18]
             mov edx,[ecx]
-            push offset lotZPos
-            push offset lotZPosParam
+            push offset Common::lotZPos
+            push offset Common::lotZPosParam
             call [edx+0x34]
             cmp [roadMaterial],0x0
             jne LAB_SkipSetOffsets
-            push [edi+0xFC]
+            push 0x1 // asFloat = true
             push [edi+0xF8]
-            call SetLotOffsetParams
-            add esp,0x8
+            push [Common::floatMax]
+            push offset lotXOffset
+            call Common::SetParamInt
+            add esp,0x10
+            push 0x1 // asFloat = true
+            push [edi+0xFC]
+            push [Common::floatMax]
+            push offset lotYOffset
+            call Common::SetParamInt
+            add esp,0x10
         LAB_SkipSetOffsets:
             mov ecx,[esp+0x18]
             mov edx,[ecx]
