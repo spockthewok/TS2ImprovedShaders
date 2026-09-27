@@ -2,6 +2,6 @@
 
 namespace LotSkirt
 {
-    extern "C" void HandleRoadParams();
+    extern "C" void AddLotSkirtParams();
     extern "C" void AddLotSkirtRoadParams();
 }

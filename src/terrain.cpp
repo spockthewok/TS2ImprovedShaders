@@ -1,6 +1,6 @@
 #include "terrain.h"
 #include "hooking.h"
-#include "TS2.h"
+#include "TS2/base.h"
 #include "common.h"
 
 namespace
@@ -24,10 +24,10 @@ namespace Terrain
 {
     // Condensed version of TSGetLotXScale and TSGetLotYScale from RPCLib
     // https://github.com/LazyDuchess/RPCLib/blob/master/RPCLib/common.cpp
-    static char *GetLotScale(char *lotAxis, BYTE addrOffset)
+    static char *GetLotScale(char *lotAxis, const DWORD addrOffset)
     {
         DWORD addr = 0x1478F10;
-        const size_t addrSize = sizeof(addr);
+        constexpr size_t addrSize = sizeof(addr);
 
         if (Hooking::MemoryReadable((DWORD *)addr, addrSize))
         {

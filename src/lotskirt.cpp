@@ -1,11 +1,11 @@
 #include "lotskirt.h"
-#include "TS2.h"
+#include "TS2/base.h"
 #include "common.h"
 #include <string>
 
 namespace
 {
-    const DWORD RegisterMaterials_Exit = 0xA83775;
+    const DWORD RegisterMaterials_Exit = 0xA83772;
     const DWORD CreateNodesForRoadCells_Exit = 0xA8432F;
 
     // Lot x/y offset from world (0, 0)
@@ -13,23 +13,23 @@ namespace
     char lotXOffset[Common::floatMax];
     const char lotYOffsetParam[] = "lotYOffset";
     char lotYOffset[Common::floatMax];
-
-    const char *roadMaterial = nullptr;
 }
 
 namespace LotSkirt
 {
-    // We skip calling setters for roads as values will have been set by lot skirt material
-    static void __declspec(naked) AddNewParams()
+    // cLotSkirt::RegisterMaterials
+    // Adds extra parameters to lot skirt material
+    // X/Y offset params use object vars precalculated by cLotSkirt::ComputeLotSkirtParameters
+    void __declspec(naked) AddLotSkirtParams()
     {
         __asm {
-            mov ecx,[esp+0x18]
+            push 0x123AFCC // "surfaceTexture"
+            call [edx+0x34]
+            mov ecx,[esp+0x14]
             mov edx,[ecx]
             push offset Common::lotZPos
             push offset Common::lotZPosParam
             call [edx+0x34]
-            cmp [roadMaterial],0x0
-            jne LAB_SkipSetOffsets
             push 0x1 // asFloat = true
             push [edi+0xF8]
             push [Common::floatMax]
@@ -42,18 +42,16 @@ namespace LotSkirt
             push offset lotYOffset
             call Common::SetParamInt
             add esp,0x10
-        LAB_SkipSetOffsets:
-            mov ecx,[esp+0x18]
+            mov ecx,[esp+0x14]
             mov edx,[ecx]
             push offset lotXOffset
             push offset lotXOffsetParam
             call [edx+0x34]
-            mov ecx,[esp+0x18]
+            mov ecx,[esp+0x14]
             mov edx,[ecx]
             push offset lotYOffset
             push offset lotYOffsetParam
-            call [edx+0x34]
-            ret
+            jmp RegisterMaterials_Exit
         }
     }
 
@@ -72,62 +70,30 @@ namespace LotSkirt
         return roadTexture.c_str();
     }
 
-    // cLotSkirt::RegisterMaterials
-    // Lot skirt road material doesn't normally have code-based params
-    // This hijacks cLotSkirt::RegisterMaterials and provides a path for adding params to roads
-    // Not sold on this approach, but it's simpler than trying to init a cMaterialDefinition object
-    void __declspec(naked) HandleRoadParams()
+    static void RegisterRoadMaterials(const char *matName)
     {
-        __asm {
-            cmp [roadMaterial],0x0
-            je LAB_LotSkirtMaterial
-            mov eax,[roadMaterial]
-            jmp LAB_SetMaterial
-        LAB_LotSkirtMaterial:
-            mov eax,[edi+0x7C]
-        LAB_SetMaterial:
-            mov ecx,[esp+0x14]
-            mov edx,[ecx]
-            push eax
-            call [edx+0x28]
-            mov ecx,[esp+0x14]
-            mov eax,[ecx]
-            cmp [roadMaterial],0x0
-            je LAB_LotSkirtDefinition
-            push 0x1241F54 // "LotSkirtRoadMaterialDefinition"
-            jmp LAB_SetDefinition
-        LAB_LotSkirtDefinition:
-            push 0x123AFDC // "LotSkirtMaterialDefinition"
-        LAB_SetDefinition:
-            call [eax+0x30]
-            cmp [roadMaterial],0x0
-            je LAB_LotSkirtTexture
-            push [roadMaterial]
-            call GetRoadTextureName
-            add esp,0x4
-            jmp LAB_SetTextureParam
-        LAB_LotSkirtTexture:
-            mov eax,[esp+0x30]
-        LAB_SetTextureParam:
-            mov ecx,[esp+0x14]
-            mov edx,[ecx]
-            push eax
-            push 0x123AFCC // "surfaceTexture"
-            call [edx+0x34]
-            call AddNewParams
-            jmp RegisterMaterials_Exit
-        }
+        nRZSceneGraph::cMaterialManager *matMgr = nRZSceneGraph::MaterialManager();
+        nRZSceneGraph::cMaterialDefinition *matDef = Common::InitMaterialDefinition();
+
+        if (!matMgr || !matDef)
+            return;
+
+        matDef->SetMaterialName(matName);
+        matDef->SetDefinition("LotSkirtRoadMaterialDefinition");
+        matDef->SetParameter("surfaceTexture", GetRoadTextureName(matName));
+        matDef->SetParameter(Common::lotZPosParam, Common::lotZPos);
+        matMgr->RegisterMaterialDefinition(matDef, 0);
+        matDef->Release();
     }
 
     // cLotSkirt::CreateNodesForRoadCells
+    // Adds extra parameters to lot skirt road material
     void __declspec(naked) AddLotSkirtRoadParams()
     {
         __asm {
-            mov ecx,[esp+0x5C]
-            mov [roadMaterial],ecx
-            mov ecx,ebx
-            call cLotSkirt::RegisterMaterials
-            mov [roadMaterial],0x0
+            push [esp+0x5C] // Road material name
+            call RegisterRoadMaterials
+            add esp,0x4
             mov eax,[esp+0x5C]
             cmp eax,edi
             jmp CreateNodesForRoadCells_Exit

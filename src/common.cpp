@@ -1,4 +1,5 @@
 #include "common.h"
+#include "TS2/base.h"
 #include <string>
 
 namespace Common
@@ -37,5 +38,17 @@ namespace Common
     void SetParamBool(char *param, size_t paramSize, const bool value)
     {
         SetParamImpl(param, paramSize, value);
+    }
+
+    // Reusable function to get new cMaterialDefinitionObject
+    // Useful for adding params to materials that don't normally have them
+    nRZSceneGraph::cMaterialDefinition *InitMaterialDefinition()
+    {
+        cGZCOM *gzcom = GZCOM();
+        nRZSceneGraph::cMaterialDefinition *matDef = nullptr;
+
+        gzcom->GetClassObject(0x49596978, 0x49596972, &matDef);
+
+        return matDef;
     }
 }

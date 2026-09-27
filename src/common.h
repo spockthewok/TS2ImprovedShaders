@@ -1,4 +1,6 @@
 #pragma once
+#include "headers.h"
+#include "TS2/cMaterialDefinition.h"
 
 namespace Common
 {
@@ -11,9 +13,20 @@ namespace Common
     extern const char lotZPosParam[];
     extern char lotZPos[floatMax];
 
+    template <typename Fn, typename T>
+    Fn GetVTableFn(T *object, const DWORD offset)
+    {
+        constexpr size_t indexSize = sizeof(uintptr_t);
+        auto vTable = *reinterpret_cast<uintptr_t **>(object);
+
+        return reinterpret_cast<Fn>(vTable[offset / indexSize]);
+    }
+
     // These are wrappers for calling SetParamImpl()
-    // Wish I didn't need these, but not possible to call template funcs directly using ASM :/
+    // Wish I didn't need them, but it's not possible to call template funcs directly using ASM :/
     void SetParamInt(char *param, size_t paramSize, const int value, bool asFloat = false);
     void SetParamFloat(char *param, size_t paramSize, const float value);
     void SetParamBool(char *param, size_t paramSize, const bool value);
+
+    nRZSceneGraph::cMaterialDefinition *InitMaterialDefinition();
 }
