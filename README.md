@@ -2,15 +2,10 @@
 ## About
 A patch for The Sims 2 that adds new shader parameters to support extended shader functionality and fixes several shader-related bugs.
 
-This plugin was primarily developed for Christaskyy's Improved Shaders mod.
-
 ## Requirements
 - The Sims 2: Ultimate Collection <ins>**OR**</ins> The Sims 2 disc version with all EPs and SPs.
 - [Sims2RPC](https://modthesims.info/d/648220/sims2rpc-modded-sims-2-launcher-for-mansion-and-garden.html) <ins>**OR**</ins>
-[Ultimate ASI Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader).
-
-> [!NOTE]
-> Christaskyy's mod is not required for this plugin to work.
+  [Ultimate ASI Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader).
 
 ## New Shader Parameters
 ### terrain.matShad

@@ -40,7 +40,7 @@ namespace Common
         SetParamImpl(param, paramSize, value);
     }
 
-    // Reusable function to get new cMaterialDefinitionObject
+    // Reusable function to get new cMaterialDefinition object
     // Useful for adding params to materials that don't normally have them
     nRZSceneGraph::cMaterialDefinition *InitMaterialDefinition()
     {
