@@ -5,7 +5,7 @@
 
 namespace
 {
-    const DWORD RegisterMaterials_Exit = 0xA83772;
+    const DWORD RegisterMaterials_Exit = 0xA83775;
     const DWORD CreateNodesForRoadCells_Exit = 0xA8432F;
 
     // Lot x/y offset from world (0, 0)
@@ -17,40 +17,27 @@ namespace
 
 namespace LotSkirt
 {
+    static void RegisterSkirtParams(nRZSceneGraph::cMaterialDefinition *matDef, int xOff, int yOff)
+    {
+        Common::SetParamInt(lotXOffset, Common::floatMax, xOff, true);
+        Common::SetParamInt(lotYOffset, Common::floatMax, yOff, true);
+        matDef->SetParameter(lotXOffsetParam, lotXOffset);
+        matDef->SetParameter(lotYOffsetParam, lotYOffset);
+        matDef->SetParameter(Common::lotZPosParam, Common::lotZPos);
+    }
+
     // cLotSkirt::RegisterMaterials
-    // Adds extra parameters to lot skirt material
     // X/Y offset params use object vars precalculated by cLotSkirt::ComputeLotSkirtParameters
     void __declspec(naked) AddLotSkirtParams()
     {
         __asm {
             push 0x123AFCC // "surfaceTexture"
             call [edx+0x34]
-            mov ecx,[esp+0x14]
-            mov edx,[ecx]
-            push offset Common::lotZPos
-            push offset Common::lotZPosParam
-            call [edx+0x34]
-            push 0x1 // asFloat = true
-            push [edi+0xF8]
-            push [Common::floatMax]
-            push offset lotXOffset
-            call Common::SetParamInt
-            add esp,0x10
-            push 0x1 // asFloat = true
             push [edi+0xFC]
-            push [Common::floatMax]
-            push offset lotYOffset
-            call Common::SetParamInt
-            add esp,0x10
-            mov ecx,[esp+0x14]
-            mov edx,[ecx]
-            push offset lotXOffset
-            push offset lotXOffsetParam
-            call [edx+0x34]
-            mov ecx,[esp+0x14]
-            mov edx,[ecx]
-            push offset lotYOffset
-            push offset lotYOffsetParam
+            push [edi+0xF8]
+            push [esp+0x1C]
+            call RegisterSkirtParams
+            add esp,0xC
             jmp RegisterMaterials_Exit
         }
     }
@@ -87,7 +74,6 @@ namespace LotSkirt
     }
 
     // cLotSkirt::CreateNodesForRoadCells
-    // Adds extra parameters to lot skirt road material
     void __declspec(naked) AddLotSkirtRoadParams()
     {
         __asm {

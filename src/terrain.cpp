@@ -24,7 +24,7 @@ namespace Terrain
 {
     // Condensed version of TSGetLotXScale and TSGetLotYScale from RPCLib
     // https://github.com/LazyDuchess/RPCLib/blob/master/RPCLib/common.cpp
-    static char *GetLotScale(char *lotAxis, const DWORD addrOffset)
+    static void GetLotScale(char *lotAxis, const DWORD addrOffset)
     {
         DWORD addr = 0x1478F10;
         constexpr size_t addrSize = sizeof(addr);
@@ -40,16 +40,14 @@ namespace Terrain
                 if (Hooking::MemoryReadable((DWORD *)addr, addrSize))
                 {
                     memcpy_s(&addr, addrSize, (DWORD *)addr, addrSize);
-                    // sizeof(lotAxis) would return pointer size, not array size
                     Common::SetParamInt(lotAxis, Common::intMax, addr);
-                    return lotAxis;
+                    return;
                 }
             }
         }
         // In case memory isn't readable for whatever reason
         // RPCLib returns lotXScale/lotYScale regardless
         Common::SetParamInt(lotAxis, Common::intMax, 0);
-        return lotAxis;
     }
 
     static void GetIsBeachLotFromStr(const char *lotTemplate)
@@ -62,7 +60,7 @@ namespace Terrain
             // Beaches will either be "BeachCommunityLotTemplate" or "BeachLotTemplate"
             isBeach = (_strnicmp(lotTemplate, "Beach", 5) == 0);
 
-        Common::SetParamBool(isBeachLot, sizeof(isBeachLot), isBeach);
+        Common::SetParamBool(isBeachLot, Common::boolMax, isBeach);
     }
 
     // cWorldDB::Load
@@ -100,7 +98,7 @@ namespace Terrain
 
     // This does very similar calculations to cLotSkirt::ComputeLotSkirtParameters
     // Terrain materials are set up before lot skirt, which is why we need this here
-    static void __declspec(naked) GetLotZPos()
+    static float __declspec(naked) GetLotZPos()
     {
         __asm {
             call TS::Globals
@@ -109,12 +107,12 @@ namespace Terrain
             mov ecx,eax
             call [edx+0x5C] // cTSGlobals::GameStateController
             test eax,eax
-            jz LAB_Return
+            jz LAB_Null
             mov edx,[eax]
             mov ecx,eax
             call [edx+0x24] // cTSGameStateController::CurrentLotInfo
             test eax,eax
-            jz LAB_Return
+            jz LAB_Null
             mov edx,[eax]
             mov ecx,eax
             call [edx+0x40] // cTSLotInfo::NHoodToLotHeightOffset
@@ -123,90 +121,59 @@ namespace Terrain
             mov ecx,eax
             call [edx+0x2C] // cTSGlobals::NeighborhoodTerrain
             test eax,eax
-            jz LAB_Return
+            jz LAB_Null
             mov edx,[eax]
             mov ecx,eax
             call [edx+0x40] // cTSNHoodTerrain::SeaLevel
             fsubp st(1),st(0) // lotZPos = lotHeightOffset - seaLevel
-            fstp [esp+0x48]
-            push [esp+0x48]
-            push [Common::floatMax]
-            push offset Common::lotZPos
-            call Common::SetParamFloat
-            add esp,0xC
+            jmp LAB_Return
+        LAB_Null:
+            fldz
         LAB_Return:
             ret
         }
     }
 
+    static void InitTerrainParams()
+    {
+        GetLotScale(lotXScale, 0x64);
+        GetLotScale(lotYScale, 0x68);
+        Common::SetParamFloat(Common::lotZPos, Common::floatMax, GetLotZPos());
+    }
+
+    static void RegisterTerrainParams(nRZSceneGraph::cMaterialDefinition *matDef)
+    {
+        matDef->SetParameter(lotXScaleParam, lotXScale);
+        matDef->SetParameter(lotYScaleParam, lotYScale);
+        matDef->SetParameter(isBeachLotParam, isBeachLot);
+        matDef->SetParameter(Common::lotZPosParam, Common::lotZPos);
+    }
+
     // cTerrain::RegisterPaintMaterialDefinition
-    // Adds extra parameters to lot terrain paint material
     void __declspec(naked) AddTerrainPaintParams()
     {
         __asm {
             push 0x123EAA4 // "alphaMapScaleV"
             call [eax+0x34]
-            push 0x64
-            push offset lotXScale
-            call GetLotScale
-            add esp,0x8
-            mov ecx,[esp+0x14]
-            mov edx,[ecx]
-            push eax // lotXScale
-            push offset lotXScaleParam
-            call [edx+0x34]
-            push 0x68
-            push offset lotYScale
-            call GetLotScale
-            add esp,0x8
-            mov ecx,[esp+0x14]
-            mov edx,[ecx]
-            push eax // lotYScale
-            push offset lotYScaleParam
-            call [edx+0x34]
-            mov ecx,[esp+0x14]
-            mov edx,[ecx]
-            push offset isBeachLot
-            push offset isBeachLotParam
-            call [edx+0x34]
-            call GetLotZPos
-            mov ecx,[esp+0x14]
-            mov edx,[ecx]
-            push offset Common::lotZPos
-            push offset Common::lotZPosParam
-            call [edx+0x34]
+            pushad
+            call InitTerrainParams
+            popad
+            push [esp+0x14]
+            call RegisterTerrainParams
+            add esp,0x4
             jmp RegisterPaintMaterialDefinition_Exit
         }
     }
 
     // cTerrain::RegisterCanvasMaterialDefinition
-    // Adds extra parameters to lot terrain canvas material
-    // Runs shortly after paint hook, so don't need to call getters again
     void __declspec(naked) AddTerrainCanvasParams()
     {
         __asm {
             push 0x123EB5C // "texture"
             call [edx+0x34]
-            mov ecx,[esp+0x18]
-            mov edx,[ecx]
-            push offset lotXScale
-            push offset lotXScaleParam
-            call [edx+0x34]
-            mov ecx,[esp+0x18]
-            mov edx,[ecx]
-            push offset lotYScale
-            push offset lotYScaleParam
-            call [edx+0x34]
-            mov ecx,[esp+0x18]
-            mov edx,[ecx]
-            push offset isBeachLot
-            push offset isBeachLotParam
-            call [edx+0x34]
-            mov ecx,[esp+0x18]
-            mov edx,[ecx]
-            push offset Common::lotZPos
-            push offset Common::lotZPosParam
-            call [edx+0x34]
+            push [esp+0x18]
+            call RegisterTerrainParams
+            add esp,0x4
             jmp RegisterCanvasMaterialDefinition_Exit
         }
     }
