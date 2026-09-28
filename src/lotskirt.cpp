@@ -9,9 +9,7 @@ namespace
     const DWORD CreateNodesForRoadCells_Exit = 0xA8432F;
 
     // Lot x/y offset from world (0, 0)
-    const char lotXOffsetParam[] = "lotXOffset";
     char lotXOffset[Common::floatMax];
-    const char lotYOffsetParam[] = "lotYOffset";
     char lotYOffset[Common::floatMax];
 }
 
@@ -21,9 +19,9 @@ namespace LotSkirt
     {
         Common::SetParamInt(lotXOffset, Common::floatMax, xOff, true);
         Common::SetParamInt(lotYOffset, Common::floatMax, yOff, true);
-        matDef->SetParameter(lotXOffsetParam, lotXOffset);
-        matDef->SetParameter(lotYOffsetParam, lotYOffset);
-        matDef->SetParameter(Common::lotZPosParam, Common::lotZPos);
+        matDef->SetParameter("lotXOffset", lotXOffset);
+        matDef->SetParameter("lotYOffset", lotYOffset);
+        matDef->SetParameter("lotZPos", Common::lotZPos);
     }
 
     // cLotSkirt::RegisterMaterials
@@ -68,7 +66,7 @@ namespace LotSkirt
         matDef->SetMaterialName(matName);
         matDef->SetDefinition("LotSkirtRoadMaterialDefinition");
         matDef->SetParameter("surfaceTexture", GetRoadTextureName(matName));
-        matDef->SetParameter(Common::lotZPosParam, Common::lotZPos);
+        matDef->SetParameter("lotZPos", Common::lotZPos);
         matMgr->RegisterMaterialDefinition(matDef, 0);
         matDef->Release();
     }

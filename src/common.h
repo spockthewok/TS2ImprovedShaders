@@ -10,7 +10,6 @@ namespace Common
     constexpr size_t intMax = floatMax;
     constexpr size_t boolMax = 6;
 
-    extern const char lotZPosParam[];
     extern char lotZPos[floatMax];
 
     template <typename Fn, typename T>

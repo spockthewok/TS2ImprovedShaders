@@ -5,7 +5,6 @@
 namespace Common
 {
     // Lot z relative to sea level
-    const char lotZPosParam[] = "lotZPos";
     char lotZPos[floatMax];
 
     template <typename T>

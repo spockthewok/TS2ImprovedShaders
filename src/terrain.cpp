@@ -11,22 +11,21 @@ namespace
     const DWORD Load_Exit = 0x102C951;
 
     // Lot width/height
-    const char lotXScaleParam[] = "lotXScale";
     char lotXScale[Common::intMax];
-    const char lotYScaleParam[] = "lotYScale";
     char lotYScale[Common::intMax];
-
-    const char isBeachLotParam[] = "isBeachLot";
+    // Whether the current lot is a beach
     char isBeachLot[Common::boolMax];
+
+    bool paramsSet = false;
 }
 
 namespace Terrain
 {
     // Condensed version of TSGetLotXScale and TSGetLotYScale from RPCLib
     // https://github.com/LazyDuchess/RPCLib/blob/master/RPCLib/common.cpp
-    static void GetLotScale(char *lotAxis, const DWORD addrOffset)
+    static UINT GetLotScale(const BYTE addrOffset)
     {
-        DWORD addr = 0x1478F10;
+        DWORD addr = 0x1478F10; // nTSSG::TSSGSystem
         constexpr size_t addrSize = sizeof(addr);
 
         if (Hooking::MemoryReadable((DWORD *)addr, addrSize))
@@ -40,14 +39,12 @@ namespace Terrain
                 if (Hooking::MemoryReadable((DWORD *)addr, addrSize))
                 {
                     memcpy_s(&addr, addrSize, (DWORD *)addr, addrSize);
-                    Common::SetParamInt(lotAxis, Common::intMax, addr);
-                    return;
+                    return addr;
                 }
             }
         }
         // In case memory isn't readable for whatever reason
-        // RPCLib returns lotXScale/lotYScale regardless
-        Common::SetParamInt(lotAxis, Common::intMax, 0);
+        return 0;
     }
 
     static void GetIsBeachLotFromStr(const char *lotTemplate)
@@ -97,7 +94,7 @@ namespace Terrain
     }
 
     // This does very similar calculations to cLotSkirt::ComputeLotSkirtParameters
-    // Terrain materials are set up before lot skirt, which is why we need this here
+    // We need this here as terrain materials are set up before lot skirt
     static float __declspec(naked) GetLotZPos()
     {
         __asm {
@@ -136,28 +133,31 @@ namespace Terrain
 
     static void InitTerrainParams()
     {
-        GetLotScale(lotXScale, 0x64);
-        GetLotScale(lotYScale, 0x68);
+        Common::SetParamInt(lotXScale, Common::intMax, GetLotScale(0x64));
+        Common::SetParamInt(lotYScale, Common::intMax, GetLotScale(0x68));
         Common::SetParamFloat(Common::lotZPos, Common::floatMax, GetLotZPos());
+        paramsSet = true;
     }
 
     static void RegisterTerrainParams(nRZSceneGraph::cMaterialDefinition *matDef)
     {
-        matDef->SetParameter(lotXScaleParam, lotXScale);
-        matDef->SetParameter(lotYScaleParam, lotYScale);
-        matDef->SetParameter(isBeachLotParam, isBeachLot);
-        matDef->SetParameter(Common::lotZPosParam, Common::lotZPos);
+        matDef->SetParameter("lotXScale", lotXScale);
+        matDef->SetParameter("lotYScale", lotYScale);
+        matDef->SetParameter("isBeachLot", isBeachLot);
+        matDef->SetParameter("lotZPos", Common::lotZPos);
     }
 
-    // cTerrain::RegisterPaintMaterialDefinition
+    // cTerrain::RegisterPaintMaterialDefinitions
+    // This executes within a loop, so we make sure to only init params once per lot
     void __declspec(naked) AddTerrainPaintParams()
     {
         __asm {
             push 0x123EAA4 // "alphaMapScaleV"
             call [eax+0x34]
-            pushad
+            cmp [paramsSet],0x0
+            jne LAB_SkipInit
             call InitTerrainParams
-            popad
+        LAB_SkipInit:
             push [esp+0x14]
             call RegisterTerrainParams
             add esp,0x4
@@ -174,6 +174,7 @@ namespace Terrain
             push [esp+0x18]
             call RegisterTerrainParams
             add esp,0x4
+            mov [paramsSet],0x0
             jmp RegisterCanvasMaterialDefinition_Exit
         }
     }
