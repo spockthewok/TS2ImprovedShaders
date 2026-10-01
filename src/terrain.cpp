@@ -131,11 +131,36 @@ namespace Terrain
         }
     }
 
+    // This is also later done by cLotSkirt::ComputeLotSkirtParameters
+    static void GetXYOffsets()
+    {
+        nTSSG::cTSSGSystem *system = nTSWorld::TSSGSystem();
+
+        if (!system)
+            return;
+
+        nTSSG::cLotSkirt *lotSkirt = system->LotSkirt();
+
+        if (!lotSkirt)
+            return;
+
+        lotSkirt->ComputeNHoodToLotTransformationParameters();
+
+        int xOffset = *reinterpret_cast<int *>(lotSkirt + 0xF8);
+        int yOffset = *reinterpret_cast<int *>(lotSkirt + 0xFC);
+        Common::SetParamInt(Common::lotXOffset, Common::floatMax, xOffset, true);
+        Common::SetParamInt(Common::lotYOffset, Common::floatMax, yOffset, true);
+        // As we're doing this early, we need to reset these or we'll crash the game (for some reason)
+        *reinterpret_cast<int *>(lotSkirt + 0xF8) = 0;
+        *reinterpret_cast<int *>(lotSkirt + 0xFC) = 0;
+    }
+
     static void InitTerrainParams()
     {
         Common::SetParamInt(lotXScale, Common::intMax, GetLotScale(0x64));
         Common::SetParamInt(lotYScale, Common::intMax, GetLotScale(0x68));
         Common::SetParamFloat(Common::lotZPos, Common::floatMax, GetLotZPos());
+        GetXYOffsets();
         paramsSet = true;
     }
 
@@ -143,8 +168,10 @@ namespace Terrain
     {
         matDef->SetParameter("lotXScale", lotXScale);
         matDef->SetParameter("lotYScale", lotYScale);
-        matDef->SetParameter("isBeachLot", isBeachLot);
+        matDef->SetParameter("lotXOffset", Common::lotXOffset);
+        matDef->SetParameter("lotYOffset", Common::lotYOffset);
         matDef->SetParameter("lotZPos", Common::lotZPos);
+        matDef->SetParameter("isBeachLot", isBeachLot);
     }
 
     // cTerrain::RegisterPaintMaterialDefinitions

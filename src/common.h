@@ -11,6 +11,8 @@ namespace Common
     constexpr size_t boolMax = 6;
 
     extern char lotZPos[floatMax];
+    extern char lotXOffset[floatMax];
+    extern char lotYOffset[floatMax];
 
     template <typename Fn, typename T>
     Fn GetVTableFn(T *object, const DWORD offset)

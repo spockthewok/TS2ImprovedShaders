@@ -7,35 +7,26 @@ namespace
 {
     const DWORD RegisterMaterials_Exit = 0xA83775;
     const DWORD CreateNodesForRoadCells_Exit = 0xA8432F;
-
-    // Lot x/y offset from world (0, 0)
-    char lotXOffset[Common::floatMax];
-    char lotYOffset[Common::floatMax];
 }
 
 namespace LotSkirt
 {
-    static void RegisterSkirtParams(nRZSceneGraph::cMaterialDefinition *matDef, int xOff, int yOff)
+    static void RegisterSkirtParams(nRZSceneGraph::cMaterialDefinition *matDef)
     {
-        Common::SetParamInt(lotXOffset, Common::floatMax, xOff, true);
-        Common::SetParamInt(lotYOffset, Common::floatMax, yOff, true);
-        matDef->SetParameter("lotXOffset", lotXOffset);
-        matDef->SetParameter("lotYOffset", lotYOffset);
+        matDef->SetParameter("lotXOffset", Common::lotXOffset);
+        matDef->SetParameter("lotYOffset", Common::lotYOffset);
         matDef->SetParameter("lotZPos", Common::lotZPos);
     }
 
     // cLotSkirt::RegisterMaterials
-    // X/Y offset params use object vars precalculated by cLotSkirt::ComputeLotSkirtParameters
     void __declspec(naked) AddLotSkirtParams()
     {
         __asm {
             push 0x123AFCC // "surfaceTexture"
             call [edx+0x34]
-            push [edi+0xFC]
-            push [edi+0xF8]
-            push [esp+0x1C]
+            push [esp+0x14]
             call RegisterSkirtParams
-            add esp,0xC
+            add esp,0x4
             jmp RegisterMaterials_Exit
         }
     }
@@ -60,8 +51,14 @@ namespace LotSkirt
         nRZSceneGraph::cMaterialManager *matMgr = nRZSceneGraph::MaterialManager();
         nRZSceneGraph::cMaterialDefinition *matDef = Common::InitMaterialDefinition();
 
-        if (!matMgr || !matDef)
+        if (!matDef)
             return;
+
+        if (!matMgr || !matName)
+        {
+            matDef->Release();
+            return;
+        }
 
         matDef->SetMaterialName(matName);
         matDef->SetDefinition("LotSkirtRoadMaterialDefinition");

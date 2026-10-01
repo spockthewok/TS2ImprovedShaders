@@ -4,6 +4,11 @@
 
 GetGZCOM GZCOM = reinterpret_cast<GetGZCOM>(0x40F318);
 
+namespace nTSWorld
+{
+    GetTSSGSystem TSSGSystem = reinterpret_cast<GetTSSGSystem>(0x42CF1B);
+}
+
 namespace TS
 {
     const DWORD Globals = 0x799A0D;

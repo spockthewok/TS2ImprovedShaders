@@ -13,6 +13,8 @@ A patch for The Sims 2 that adds new shader parameters to support extended shade
 | :-------: | :--: | :---------: |
 | `lotXScale` | Integer | Width of the current lot in tiles. |
 | `lotYScale` | Integer | Height of the current lot in tiles. |
+| `lotXOffset` | Float | The current lot's x-coordinate relative the world origin (0, 0). |
+| `lotYOffset` | Float | The current lot's y-coordinate relative the world origin (0, 0). |
 | `lotZPos` | Float | How high the current lot is above sea level. |
 | `isBeachLot` | Boolean | Whether the current lot is a beach lot. |
 

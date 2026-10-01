@@ -6,6 +6,9 @@ namespace Common
 {
     // Lot z relative to sea level
     char lotZPos[floatMax];
+    // Lot x/y offset from world (0, 0)
+    char lotXOffset[floatMax];
+    char lotYOffset[floatMax];
 
     template <typename T>
     static void SetParamImpl(char *param, size_t paramSize, const T &value, bool asFloat = false)
