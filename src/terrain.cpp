@@ -21,32 +21,6 @@ namespace
 
 namespace Terrain
 {
-    // Condensed version of TSGetLotXScale and TSGetLotYScale from RPCLib
-    // https://github.com/LazyDuchess/RPCLib/blob/master/RPCLib/common.cpp
-    static UINT GetLotScale(const BYTE addrOffset)
-    {
-        DWORD addr = 0x1478F10; // nTSSG::TSSGSystem
-        constexpr size_t addrSize = sizeof(addr);
-
-        if (Hooking::MemoryReadable((DWORD *)addr, addrSize))
-        {
-            memcpy_s(&addr, addrSize, (DWORD *)addr, addrSize);
-            addr += 0x80;
-            if (Hooking::MemoryReadable((DWORD *)addr, addrSize))
-            {
-                memcpy_s(&addr, addrSize, (DWORD *)addr, addrSize);
-                addr += addrOffset;
-                if (Hooking::MemoryReadable((DWORD *)addr, addrSize))
-                {
-                    memcpy_s(&addr, addrSize, (DWORD *)addr, addrSize);
-                    return addr;
-                }
-            }
-        }
-        // In case memory isn't readable for whatever reason
-        return 0;
-    }
-
     static void GetIsBeachLotFromStr(const char *lotTemplate)
     {
         bool isBeach;
@@ -93,74 +67,89 @@ namespace Terrain
         }
     }
 
-    // This does very similar calculations to cLotSkirt::ComputeLotSkirtParameters
-    // We need this here as terrain materials are set up before lot skirt
-    static float __declspec(naked) GetLotZPos()
+    static void GetLotScale(float *scale)
     {
-        __asm {
-            call TS::Globals
-            mov [esp+0x48],eax
-            mov edx,[eax]
-            mov ecx,eax
-            call [edx+0x5C] // cTSGlobals::GameStateController
-            test eax,eax
-            jz LAB_Null
-            mov edx,[eax]
-            mov ecx,eax
-            call [edx+0x24] // cTSGameStateController::CurrentLotInfo
-            test eax,eax
-            jz LAB_Null
-            mov edx,[eax]
-            mov ecx,eax
-            call [edx+0x40] // cTSLotInfo::NHoodToLotHeightOffset
-            mov eax,[esp+0x48]
-            mov edx,[eax]
-            mov ecx,eax
-            call [edx+0x2C] // cTSGlobals::NeighborhoodTerrain
-            test eax,eax
-            jz LAB_Null
-            mov edx,[eax]
-            mov ecx,eax
-            call [edx+0x40] // cTSNHoodTerrain::SeaLevel
-            fsubp st(1),st(0) // lotZPos = lotHeightOffset - seaLevel
-            jmp LAB_Return
-        LAB_Null:
-            fldz
-        LAB_Return:
-            ret
-        }
+        nTSWorld::cWorldDB *worldDB = TS::WorldDB();
+
+        if (!worldDB)
+            return;
+
+        scale[0] = worldDB->LotSizeX();
+        scale[1] = worldDB->LotSizeY();
     }
 
-    // This is also later done by cLotSkirt::ComputeLotSkirtParameters
-    static void GetXYOffsets()
+    // This does very similar calculations to cLotSkirt::ComputeLotSkirtParameters
+    // Terrain materials are set up before lot skirt, so we use our own function
+    static float GetLotZPos()
     {
-        nTSSG::cTSSGSystem *system = nTSWorld::TSSGSystem();
+        cTSGameStateController *gameState = TS::GameStateController();
+        cTSLotInfo *lotInfo = gameState->CurrentLotInfo();
 
-        if (!system)
+        if (!lotInfo)
+            return 0.0;
+
+        cTSGlobals *globals = TS::Globals();
+        cTSNHoodTerrain *nhoodTerrain = globals->NeighborhoodTerrain();
+
+        if (!nhoodTerrain)
+            return 0.0;
+
+        float lotHeightOffset = lotInfo->NHoodToLotHeightOffset();
+        float seaLevel = nhoodTerrain->SeaLevel();
+
+        return lotHeightOffset - seaLevel;
+    }
+
+    // This is near identical to cLotSkirt::ComputeNHoodToLotTransformationParameters
+    // Again, we use our own function as calling the lot skirt method early can cause crashes
+    static void GetLotXYOffsets(ULONG32 *offsets)
+    {
+        ULONG32 size[2];
+        ULONG32 location[2];
+        ULONG32 width = 0;
+        ULONG32 height = 0;
+
+        cTSGameStateController *gameState = TS::GameStateController();
+        cTSLotInfo *lotInfo = gameState->CurrentLotInfo();
+
+        if (!lotInfo)
             return;
 
-        nTSSG::cLotSkirt *lotSkirt = system->LotSkirt();
+        UINT rotation = lotInfo->RotationRelativeToCreation() & 0xFF;
+        cTSBaseLotInfo *baseLotInfo = lotInfo->GetBaseLotInfo();
+        baseLotInfo->GetSizeAtCreation(&size[0], &size[1]);
+        lotInfo->GetLocation(&location[0], &location[1]);
 
-        if (!lotSkirt)
-            return;
+        switch (rotation)
+        {
+        case 1:
+            height = size[0];
+            break;
+        case 2:
+            width = size[0];
+            height = size[1];
+            break;
+        case 3:
+            width = size[1];
+        }
 
-        lotSkirt->ComputeNHoodToLotTransformationParameters();
-
-        int xOffset = *reinterpret_cast<int *>(lotSkirt + 0xF8);
-        int yOffset = *reinterpret_cast<int *>(lotSkirt + 0xFC);
-        Common::SetParamInt(Common::lotXOffset, Common::floatMax, xOffset, true);
-        Common::SetParamInt(Common::lotYOffset, Common::floatMax, yOffset, true);
-        // As we're doing this early, we need to reset these or we'll crash the game (for some reason)
-        *reinterpret_cast<int *>(lotSkirt + 0xF8) = 0;
-        *reinterpret_cast<int *>(lotSkirt + 0xFC) = 0;
+        offsets[0] = width + location[0];
+        offsets[1] = height + location[1];
     }
 
     static void InitTerrainParams()
     {
-        Common::SetParamInt(lotXScale, Common::intMax, GetLotScale(0x64));
-        Common::SetParamInt(lotYScale, Common::intMax, GetLotScale(0x68));
+        float scale[2] = {0.0, 0.0};
+        ULONG32 offsets[2] = {0, 0};
+
+        GetLotScale(scale);
+        GetLotXYOffsets(offsets);
+
+        Common::SetParamFloat(lotXScale, Common::intMax, scale[0], true);
+        Common::SetParamFloat(lotYScale, Common::intMax, scale[1], true);
         Common::SetParamFloat(Common::lotZPos, Common::floatMax, GetLotZPos());
-        GetXYOffsets();
+        Common::SetParamInt(Common::lotXOffset, Common::floatMax, offsets[0], true);
+        Common::SetParamInt(Common::lotYOffset, Common::floatMax, offsets[1], true);
         paramsSet = true;
     }
 

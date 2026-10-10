@@ -4,14 +4,11 @@
 
 GetGZCOM GZCOM = reinterpret_cast<GetGZCOM>(0x40F318);
 
-namespace nTSWorld
-{
-    GetTSSGSystem TSSGSystem = reinterpret_cast<GetTSSGSystem>(0x42CF1B);
-}
-
 namespace TS
 {
-    const DWORD Globals = 0x799A0D;
+    GetWorldDB WorldDB = reinterpret_cast<GetWorldDB>(0x4AE0DC);
+    GetGlobals Globals = reinterpret_cast<GetGlobals>(0x799A0D);
+    GetGameStateController GameStateController = reinterpret_cast<GetGameStateController>(0x799B65);
 }
 
 namespace nRZSceneGraph

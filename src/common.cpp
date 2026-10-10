@@ -11,7 +11,7 @@ namespace Common
     char lotYOffset[floatMax];
 
     template <typename T>
-    static void SetParamImpl(char *param, size_t paramSize, const T &value, bool asFloat = false)
+    static void SetParamImpl(char *param, size_t paramSize, const T &value, bool convert = false)
     {
         std::string valueStr;
 
@@ -19,8 +19,10 @@ namespace Common
             valueStr = value;
         else if constexpr (std::is_same_v<T, bool>)
             valueStr = value ? "true" : "false";
-        else if ((constexpr(std::is_same_v<T, int>)) && asFloat)
+        else if ((constexpr(std::is_same_v<T, int>)) && convert)
             valueStr = std::to_string(static_cast<float>(value));
+        else if ((constexpr(std::is_same_v<T, float>)) && convert)
+            valueStr = std::to_string(static_cast<int>(value));
         else
             valueStr = std::to_string(value);
 
@@ -32,9 +34,9 @@ namespace Common
         SetParamImpl(param, paramSize, value, asFloat);
     }
 
-    void SetParamFloat(char *param, size_t paramSize, const float value)
+    void SetParamFloat(char *param, size_t paramSize, const float value, bool asInt)
     {
-        SetParamImpl(param, paramSize, value);
+        SetParamImpl(param, paramSize, value, asInt);
     }
 
     void SetParamBool(char *param, size_t paramSize, const bool value)
