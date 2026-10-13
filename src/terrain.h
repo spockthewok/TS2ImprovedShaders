@@ -6,4 +6,5 @@ namespace Terrain
     extern "C" void GetLotTemplate();
     extern "C" void AddTerrainPaintParams();
     extern "C" void AddTerrainCanvasParams();
+    extern "C" void AddTerrainCutoutParams();
 }

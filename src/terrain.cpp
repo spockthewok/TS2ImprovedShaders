@@ -6,7 +6,8 @@
 namespace
 {
     const DWORD RegisterPaintMaterialDefinition_Exit = 0xAE23C2;
-    const DWORD RegisterCanvasMaterialDefinition_Exit = 0xAE2ED0;
+    const DWORD RegisterCanvasMaterialDefinition_Exit_1 = 0xAE2ED0;
+    const DWORD RegisterCanvasMaterialDefinition_Exit_2 = 0xAE2F61;
     const DWORD LoadLot_Exit = 0xEFC9D0;
     const DWORD Load_Exit = 0x102C951;
 
@@ -190,8 +191,20 @@ namespace Terrain
             push [esp+0x18]
             call RegisterTerrainParams
             add esp,0x4
+            jmp RegisterCanvasMaterialDefinition_Exit_1
+        }
+    }
+
+    void __declspec(naked) AddTerrainCutoutParams()
+    {
+        __asm {
+            push 0x123EDA4 // "hasCutout"
+            call [eax+0x34]
+            push [esp+0x14]
+            call RegisterTerrainParams
+            add esp,0x4
             mov [paramsSet],0x0
-            jmp RegisterCanvasMaterialDefinition_Exit
+            jmp RegisterCanvasMaterialDefinition_Exit_2
         }
     }
 }
