@@ -68,15 +68,15 @@ namespace Terrain
         }
     }
 
-    static void GetLotScale(float *scale)
+    static void GetLotScale(int *scale)
     {
         nTSWorld::cWorldDB *worldDB = TS::WorldDB();
 
         if (!worldDB)
             return;
 
-        scale[0] = worldDB->LotSizeX();
-        scale[1] = worldDB->LotSizeY();
+        scale[0] = worldDB->NumTilesX();
+        scale[1] = worldDB->NumTilesY();
     }
 
     // This does very similar calculations to cLotSkirt::ComputeLotSkirtParameters
@@ -87,13 +87,13 @@ namespace Terrain
         cTSLotInfo *lotInfo = gameState->CurrentLotInfo();
 
         if (!lotInfo)
-            return 0.0;
+            return 0.0f;
 
         cTSGlobals *globals = TS::Globals();
         cTSNHoodTerrain *nhoodTerrain = globals->NeighborhoodTerrain();
 
         if (!nhoodTerrain)
-            return 0.0;
+            return 0.0f;
 
         float lotHeightOffset = lotInfo->NHoodToLotHeightOffset();
         float seaLevel = nhoodTerrain->SeaLevel();
@@ -140,14 +140,14 @@ namespace Terrain
 
     static void InitTerrainParams()
     {
-        float scale[2] = {0.0, 0.0};
+        int scale[2] = {0, 0};
         ULONG32 offsets[2] = {0, 0};
 
         GetLotScale(scale);
         GetLotXYOffsets(offsets);
 
-        Common::SetParamFloat(lotXScale, Common::intMax, scale[0], true);
-        Common::SetParamFloat(lotYScale, Common::intMax, scale[1], true);
+        Common::SetParamInt(lotXScale, Common::intMax, scale[0]);
+        Common::SetParamInt(lotYScale, Common::intMax, scale[1]);
         Common::SetParamFloat(Common::lotZPos, Common::floatMax, GetLotZPos());
         Common::SetParamInt(Common::lotXOffset, Common::floatMax, offsets[0], true);
         Common::SetParamInt(Common::lotYOffset, Common::floatMax, offsets[1], true);
@@ -195,6 +195,7 @@ namespace Terrain
         }
     }
 
+    // cTerrain::RegisterCanvasMaterialDefinition
     void __declspec(naked) AddTerrainCutoutParams()
     {
         __asm {

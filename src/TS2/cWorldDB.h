@@ -5,7 +5,7 @@ namespace nTSWorld
     class cWorldDB
     {
     public:
-        float LotSizeX();
-        float LotSizeY();
+        int NumTilesX();
+        int NumTilesY();
     };
 }

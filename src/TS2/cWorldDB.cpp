@@ -3,17 +3,17 @@
 
 namespace nTSWorld
 {
-    float cWorldDB::LotSizeX()
+    int cWorldDB::NumTilesX()
     {
-        using Func = float(__thiscall *)(cWorldDB *);
-        auto vFunc = Common::GetVTableFn<Func>(this, 0x13C);
+        using Func = int(__thiscall *)(cWorldDB *);
+        auto vFunc = Common::GetVTableFn<Func>(this, 0x154);
         return vFunc(this);
     }
 
-    float cWorldDB::LotSizeY()
+    int cWorldDB::NumTilesY()
     {
-        using Func = float(__thiscall *)(cWorldDB *);
-        auto vFunc = Common::GetVTableFn<Func>(this, 0x140);
+        using Func = int(__thiscall *)(cWorldDB *);
+        auto vFunc = Common::GetVTableFn<Func>(this, 0x158);
         return vFunc(this);
     }
 }

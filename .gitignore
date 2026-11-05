@@ -1,0 +1,7 @@
+*.asi
+*.ilk
+*.obj
+*.pdb
+
+.vscode
+Makefile

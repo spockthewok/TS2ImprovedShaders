@@ -11,7 +11,7 @@ namespace
 
 namespace LotSkirt
 {
-    static void RegisterSkirtParams(nRZSceneGraph::cMaterialDefinition *matDef)
+    static void RegisterLotSkirtParams(nRZSceneGraph::cMaterialDefinition *matDef)
     {
         matDef->SetParameter("lotXOffset", Common::lotXOffset);
         matDef->SetParameter("lotYOffset", Common::lotYOffset);
@@ -25,7 +25,7 @@ namespace LotSkirt
             push 0x123AFCC // "surfaceTexture"
             call [edx+0x34]
             push [esp+0x14]
-            call RegisterSkirtParams
+            call RegisterLotSkirtParams
             add esp,0x4
             jmp RegisterMaterials_Exit
         }
@@ -63,7 +63,7 @@ namespace LotSkirt
         matDef->SetMaterialName(matName);
         matDef->SetDefinition("LotSkirtRoadMaterialDefinition");
         matDef->SetParameter("surfaceTexture", GetRoadTextureName(matName));
-        matDef->SetParameter("lotZPos", Common::lotZPos);
+        RegisterLotSkirtParams(matDef);
         matMgr->RegisterMaterialDefinition(matDef, 0);
         matDef->Release();
     }
